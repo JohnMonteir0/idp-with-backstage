@@ -94,12 +94,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f yarn.lock
-          test -f packages/backend/Dockerfile
-          test -f app-config.production.yaml
+          for required_file in yarn.lock packages/backend/Dockerfile app-config.production.yaml; do
+            if [[ ! -f "$required_file" ]]; then
+              echo "::error::Backstage source repository is missing $required_file"
+              echo "::error::BACKSTAGE_SOURCE_REPOSITORY must point to the Backstage application repository, not this infrastructure repository or an ECR URI."
+              exit 1
+            fi
+          done
           corepack enable
+          echo 'Installing Backstage dependencies'
           yarn install --immutable
+          echo 'Type-checking Backstage'
           yarn tsc
+          echo 'Building the Backstage backend bundle'
           yarn build:backend
       - name: Build runtime image
         shell: bash

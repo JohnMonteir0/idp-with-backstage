@@ -38,7 +38,7 @@ spec:
         - name: NODE_ENV
           value: production
         - name: BACKSTAGE_BASE_URL
-          value: https://backstage-dev.107363237542.montlabz.com
+          value: http://backstage-dev.REPLACE_ACCOUNT_ID.montlabz.com
         envFrom:
         - secretRef:
             name: postgres-secrets

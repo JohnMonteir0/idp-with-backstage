@@ -36,7 +36,6 @@ jobs:
       BACKSTAGE_BUILD_ROLE_ARN: ${{ secrets.BACKSTAGE_BUILD_ROLE_ARN }}
       ECR_REPOSITORY: ${{ secrets.BACKSTAGE_ECR_REPOSITORY || 'backstage' }}
       BACKSTAGE_ENVIRONMENT: ${{ secrets.BACKSTAGE_ENVIRONMENT || 'dev' }}
-      TLS_SECRET_NAME: ${{ secrets.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
       CLOUDFLARE_PROXIED: ${{ secrets.BACKSTAGE_CLOUDFLARE_PROXIED || 'false' }}
     steps:
       - uses: actions/checkout@v5

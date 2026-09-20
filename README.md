@@ -87,16 +87,28 @@ Keep your existing production sign-in provider, catalog identity resolution, and
 
 The overlay config registers the template catalog and GitHub integration. A fine-grained token needs this repository's **Contents: read/write**, **Pull requests: read/write**, and metadata access. The token is server-side; it is not an AWS credential. You can replace it with your existing GitHub App integration. Preserve other catalog locations/integrations when merging the overlay: configuration arrays can replace existing arrays.
 
-Reuse the portal's existing PostgreSQL database and credentials. The default overlay verifies TLS using `/app/certs/global-bundle.pem`; include the [AWS RDS CA bundle](https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem) in your image at that path, or adapt the TLS/CA configuration to your existing database. The Backstage DB user must retain its existing plugin database/schema creation privileges. Portal storage is independent of the databases requested through the templates.
+The manifests include a PostgreSQL Deployment, Service, and persistent volume claim following the [official Backstage Kubernetes guide](https://backstage.io/docs/deployment/k8s/). Backstage connects to `postgres.backstage:5432` using the demo `postgres-secrets`. Replace the demo credentials and GitHub token with SealedSecrets or ExternalSecrets before production. If you already operate PostgreSQL elsewhere, remove the PostgreSQL resources from `manifests/backstage/kustomization.yaml`, create `postgres-secrets` with your external host, and keep the Backstage Deployment.
 
-Create `backstage-secrets` without committing credentials:
+For the included demo manifests, the two Secrets are created by Argo CD. Replace their demo values before production. If you remove the demo Secret resources, create the runtime Secrets without committing credentials:
 
 ```sh
 kubectl create namespace backstage --dry-run=client -o yaml | kubectl apply -f -
 cp docs/backstage-secrets.env.example /tmp/backstage-secrets.env
 chmod 600 /tmp/backstage-secrets.env
 # Edit /tmp/backstage-secrets.env with your real values and existing auth variables.
-kubectl -n backstage create secret generic backstage-secrets --from-env-file=/tmp/backstage-secrets.env --dry-run=client -o yaml | kubectl apply -f -
+set -a
+. /tmp/backstage-secrets.env
+set +a
+kubectl -n backstage create secret generic postgres-secrets \
+  --from-literal=POSTGRES_HOST="$POSTGRES_HOST" \
+  --from-literal=POSTGRES_PORT="$POSTGRES_PORT" \
+  --from-literal=POSTGRES_USER="$POSTGRES_USER" \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n backstage create secret generic backstage-secrets \
+  --from-literal=BACKSTAGE_BASE_URL="$BACKSTAGE_BASE_URL" \
+  --from-literal=GITHUB_TOKEN="$GITHUB_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
 rm /tmp/backstage-secrets.env
 ```
 

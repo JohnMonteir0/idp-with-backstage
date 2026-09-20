@@ -41,6 +41,8 @@ spec:
           value: https://backstage-dev.107363237542.montlabz.com
         envFrom:
         - secretRef:
+            name: postgres-secrets
+        - secretRef:
             name: backstage-secrets
         volumeMounts:
         - name: config

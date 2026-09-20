@@ -5,10 +5,10 @@ GitHub Actions workflows live in **`.github/workflows/`**. `backstage-image.yaml
 This configuration uses **Cilium ingress** and your existing **ExternalDNS + Cloudflare** installation. The URL is:
 
 ```text
-https://backstage-<environment>.<AWS-account-ID>.montlabz.com
+http://backstage-<environment>.<AWS-account-ID>.montlabz.com
 ```
 
-The account ID comes from `aws sts get-caller-identity` after GitHub assumes the ECR publisher role. The update script changes the image, Ingress rule, TLS host, both ExternalDNS hostname annotations, and the container's `BACKSTAGE_BASE_URL` together. Kubernetes YAML does not evaluate Terraform `${var.environment}` expressions; the workflow writes concrete values before Argo sync.
+The account ID comes from `aws sts get-caller-identity` after GitHub assumes the ECR publisher role. The update script changes the image, Ingress rule, both ExternalDNS hostname annotations, and the container's HTTP `BACKSTAGE_BASE_URL` together. Kubernetes YAML does not evaluate Terraform `${var.environment}` expressions; the workflow writes concrete values before Argo sync.
 
 ## Application source
 
@@ -43,7 +43,6 @@ Changes to the Backstage application, workflow, `docker/`, or deployment update 
    | `BACKSTAGE_BUILD_ROLE_ARN` | `arn:aws:iam::<account>:role/github-backstage-build` |
    | `BACKSTAGE_ECR_REPOSITORY` | Defaults to `backstage` |
    | `BACKSTAGE_ENVIRONMENT` | Defaults to `dev`, e.g. `prod` |
-   | `BACKSTAGE_TLS_SECRET_NAME` | Defaults to `backstage-tls` |
    | `BACKSTAGE_CLOUDFLARE_PROXIED` | Defaults to `false`; see Cloudflare requirements below |
 
 4. Under **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The workflow requests Contents and Pull requests write access for its deployment PR. It does not approve or merge its own PR. If your organization prevents bot-created PRs, the PR step needs an approved GitHub App token. PRs created with the built-in token do not trigger ordinary `pull_request` workflows; use an App token for that step if required checks depend on such triggers.
@@ -54,15 +53,9 @@ There is one deployment directory and one automation PR branch. The environment 
 
 ## Cilium, TLS and automatic Cloudflare DNS
 
-`manifests/backstage/ingress.yaml` uses `ingressClassName: cilium`, shared load balancer mode, HTTPS redirect, and `backstage-tls` in namespace `backstage`. It routes to the existing ClusterIP Service on port 7007. Your existing Cilium ingress controller must be enabled and its shared load balancer must be reachable by your intended clients. The cluster's Cilium/load-balancer configuration controls the public/private exposure; this repository does not change it. If your setup uses dedicated mode, change `ingress.cilium.io/loadbalancer-mode` to `dedicated` and apply your existing Service load balancer annotation policy.
+`manifests/backstage/ingress.yaml` uses `ingressClassName: cilium`, shared load balancer mode, `ingress.cilium.io/force-https: disabled`, and `ingress.cilium.io/backend-service-port: http`. It routes HTTP to the existing ClusterIP Service on port 7007. Your existing Cilium ingress controller must be enabled and its shared load balancer must be reachable by your intended clients. The cluster's Cilium/load-balancer configuration controls the public/private exposure; this repository does not change it. If your setup uses dedicated mode, change `ingress.cilium.io/loadbalancer-mode` to `dedicated` and apply your existing Service load balancer annotation policy.
 
-Provide a certificate covering the exact hostname, or `*.<account-ID>.montlabz.com`. A certificate for `*.montlabz.com` does **not** cover this additional subdomain level. Create the TLS secret using your existing certificate system, or:
-
-```sh
-kubectl -n backstage create secret tls backstage-tls --cert=/secure/path/fullchain.pem --key=/secure/path/privkey.pem
-```
-
-The namespace must exist first. For cert-manager, add your existing issuer annotation to the Ingress and let ingress-shim manage the TLS secret. ExternalDNS creates DNS records, not certificates. Update your Backstage sign-in provider's callback URLs for the generated hostname. The Deployment's explicit `BACKSTAGE_BASE_URL` overrides the older value in `backstage-secrets`.
+This PoC intentionally has no TLS secret and uses HTTP. ExternalDNS creates the DNS record, while Cilium serves HTTP through its shared load balancer. Update the Backstage sign-in provider's callback URLs for the generated `http://` hostname. The Deployment's explicit `BACKSTAGE_BASE_URL` overrides the older value in `backstage-secrets`.
 
 The Ingress includes your requested annotation:
 
@@ -72,7 +65,7 @@ external-dns.alpha.kubernetes.io/hostname: backstage-dev.123456789012.montlabz.c
 
 It also carries `external-dns.kubernetes.io/hostname` with the same value to support newer installations. Both annotation prefixes carry the same `cloudflare-proxied` setting. ExternalDNS must watch **Ingress** resources (`--source=ingress`), include `montlabz.com` in its domain filter, and have Cloudflare Zone Read and DNS Edit permissions for that zone. Keep its existing credentials in the controller; CI and Backstage do not need them. The controller's annotation/namespace filters must include this Ingress, and its TXT ownership configuration must not conflict with another controller.
 
-The default is DNS-only (`cloudflare-proxied: "false"`). For a private Cilium load balancer, clients need private connectivity; public Cloudflare proxy servers cannot reach it directly. Enable proxying only for a reachable origin (or your separately configured tunnel setup), use Cloudflare **Full (strict)** TLS, and ensure your Cloudflare edge certificate covers the hostname. Cloudflare's standard zone wildcard may not cover this nested name; your zone/certificate setup must do so.
+The default is DNS-only (`cloudflare-proxied: "false"`). For a private Cilium load balancer, clients need private connectivity; public Cloudflare proxy servers cannot reach it directly. HTTP is suitable for this PoC only; enable TLS and Cloudflare **Full (strict)** before production.
 
 ## Verify
 
@@ -89,6 +82,6 @@ kubectl -n YOUR_EXTERNAL_DNS_NAMESPACE logs deployment/YOUR_EXTERNAL_DNS_DEPLOYM
 dig backstage-dev.123456789012.montlabz.com
 ```
 
-The Ingress must get a load balancer address before ExternalDNS can discover its target. If it stays empty, check Cilium ingress and the existing load balancer provisioning configuration. Once the record exists, test HTTPS and Backstage login. Argo sync only confirms resource application; it does not confirm DNS propagation or successful login.
+The Ingress must get a load balancer address before ExternalDNS can discover its target. If it stays empty, check Cilium ingress and the existing load balancer provisioning configuration. Once the record exists, test HTTP and Backstage login. Argo sync only confirms resource application; it does not confirm DNS propagation or successful login.
 
 References: [Backstage image builds](https://backstage.io/docs/deployment/docker/), [GitHub AWS OIDC](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws), [Cilium ingress](https://docs.cilium.io/en/stable/network/servicemesh/ingress/), [ExternalDNS annotations](https://github.com/kubernetes-sigs/external-dns/blob/master/docs/annotations/annotations.md), and [Cloudflare provider](https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/cloudflare.md).

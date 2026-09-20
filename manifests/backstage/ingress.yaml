@@ -9,7 +9,8 @@ metadata:
     external-dns.kubernetes.io/hostname: backstage-dev.REPLACE_ACCOUNT_ID.montlabz.com
     external-dns.kubernetes.io/cloudflare-proxied: 'false'
     ingress.cilium.io/loadbalancer-mode: shared
-    ingress.cilium.io/force-https: enabled
+    ingress.cilium.io/force-https: disabled
+    ingress.cilium.io/backend-service-port: http
 spec:
   ingressClassName: cilium
   rules:
@@ -23,7 +24,3 @@ spec:
             name: backstage
             port:
               number: 7007
-  tls:
-  - hosts:
-    - backstage-dev.REPLACE_ACCOUNT_ID.montlabz.com
-    secretName: backstage-tls

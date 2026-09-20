@@ -18,7 +18,6 @@ def configure(root, env):
     if len(hostname.split('.')[0]) > 63:
         raise ValueError('Environment produces a DNS label longer than 63 characters')
     image = required('IMAGE', rf'{account}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/[a-z0-9/_.-]+@sha256:[a-f0-9]{{64}}')
-    tls_secret = required('TLS_SECRET_NAME', r'[a-z0-9]+(?:[.-][a-z0-9]+)*')
     proxied = env.get('CLOUDFLARE_PROXIED', 'false')
     if proxied not in ('true', 'false'):
         raise ValueError('Invalid CLOUDFLARE_PROXIED')
@@ -28,7 +27,7 @@ def configure(root, env):
     container = next(c for c in deployment['spec']['template']['spec']['containers'] if c['name'] == 'backstage')
     container['image'] = image
     container['env'] = [v for v in container.get('env', []) if v['name'] != 'BACKSTAGE_BASE_URL']
-    container['env'].append({'name': 'BACKSTAGE_BASE_URL', 'value': f'https://{hostname}'})
+    container['env'].append({'name': 'BACKSTAGE_BASE_URL', 'value': f'http://{hostname}'})
     ingress_path = directory / 'ingress.yaml'
     ingress = yaml.safe_load(ingress_path.read_text())
     annotations = ingress['metadata']['annotations']
@@ -36,7 +35,7 @@ def configure(root, env):
         annotations[f'{prefix}/hostname'] = hostname
         annotations[f'{prefix}/cloudflare-proxied'] = proxied
     ingress['spec']['rules'][0]['host'] = hostname
-    ingress['spec']['tls'] = [{'hosts': [hostname], 'secretName': tls_secret}]
+    ingress['spec'].pop('tls', None)
     deployment_path.write_text(yaml.safe_dump(deployment, sort_keys=False))
     ingress_path.write_text(yaml.safe_dump(ingress, sort_keys=False))
     print(f'Configured {hostname} with {image}')

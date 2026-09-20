@@ -52,6 +52,10 @@ backend:
       user: ${POSTGRES_USER}
       password: ${POSTGRES_PASSWORD}
 
+  reading:
+    allow:
+      - host: raw.githubusercontent.com
+
 integrations:
   github:
     - host: github.com

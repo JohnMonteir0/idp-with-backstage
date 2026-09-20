@@ -14,7 +14,6 @@ on:
       - 'packages/**'
       - 'plugins/**'
       - 'examples/**'
-      - 'manifests/backstage/**'
 
 permissions:
   contents: read

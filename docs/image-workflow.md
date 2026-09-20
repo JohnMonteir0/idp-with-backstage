@@ -54,7 +54,7 @@ There is one deployment directory and one automation PR branch. The environment 
 
 ## Cilium, TLS and automatic Cloudflare DNS
 
-`platform/backstage/ingress.yaml` uses `ingressClassName: cilium`, shared load balancer mode, HTTPS redirect, and `backstage-tls` in namespace `backstage`. It routes to the existing ClusterIP Service on port 7007. Your existing Cilium ingress controller must be enabled and its shared load balancer must be reachable by your intended clients. The cluster's Cilium/load-balancer configuration controls the public/private exposure; this repository does not change it. If your setup uses dedicated mode, change `ingress.cilium.io/loadbalancer-mode` to `dedicated` and apply your existing Service load balancer annotation policy.
+`manifests/backstage/ingress.yaml` uses `ingressClassName: cilium`, shared load balancer mode, HTTPS redirect, and `backstage-tls` in namespace `backstage`. It routes to the existing ClusterIP Service on port 7007. Your existing Cilium ingress controller must be enabled and its shared load balancer must be reachable by your intended clients. The cluster's Cilium/load-balancer configuration controls the public/private exposure; this repository does not change it. If your setup uses dedicated mode, change `ingress.cilium.io/loadbalancer-mode` to `dedicated` and apply your existing Service load balancer annotation policy.
 
 Provide a certificate covering the exact hostname, or `*.<account-ID>.montlabz.com`. A certificate for `*.montlabz.com` does **not** cover this additional subdomain level. Create the TLS secret using your existing certificate system, or:
 
@@ -76,10 +76,10 @@ The default is DNS-only (`cloudflare-proxied: "false"`). For a private Cilium lo
 
 ## Verify
 
-Local checks: `python3 scripts/test_configure_backstage.py` (requires PyYAML), `actionlint .github/workflows/backstage-image.yaml`, and `kubectl kustomize platform/backstage`. The application image build must run in GitHub after source configuration; the source app is not present here.
+Local checks: `python3 scripts/test_configure_backstage.py` (requires PyYAML), `actionlint .github/workflows/backstage-image.yaml`, and `kubectl kustomize manifests/backstage`.
 
 ```sh
-kubectl kustomize platform/backstage
+kubectl kustomize manifests/backstage
 argocd app get backstage
 kubectl -n backstage rollout status deployment/backstage
 kubectl -n backstage get ingress backstage -o wide

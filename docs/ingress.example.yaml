@@ -1,4 +1,4 @@
-# Reference only; the deployed Ingress is platform/backstage/ingress.yaml.
+# Reference only; the deployed Ingress is manifests/backstage/ingress.yaml.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

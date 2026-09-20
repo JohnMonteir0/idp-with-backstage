@@ -89,14 +89,26 @@ The overlay config registers the template catalog and GitHub integration. A fine
 
 Reuse the portal's existing PostgreSQL database and credentials. The default overlay verifies TLS using `/app/certs/global-bundle.pem`; include the [AWS RDS CA bundle](https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem) in your image at that path, or adapt the TLS/CA configuration to your existing database. The Backstage DB user must retain its existing plugin database/schema creation privileges. Portal storage is independent of the databases requested through the templates.
 
-Create `backstage-secrets` without committing credentials:
+Create the two runtime Secrets without committing credentials. This follows Backstage's Kubernetes deployment guidance: PostgreSQL values are separate from Backstage integration values:
 
 ```sh
 kubectl create namespace backstage --dry-run=client -o yaml | kubectl apply -f -
 cp docs/backstage-secrets.env.example /tmp/backstage-secrets.env
 chmod 600 /tmp/backstage-secrets.env
 # Edit /tmp/backstage-secrets.env with your real values and existing auth variables.
-kubectl -n backstage create secret generic backstage-secrets --from-env-file=/tmp/backstage-secrets.env --dry-run=client -o yaml | kubectl apply -f -
+set -a
+. /tmp/backstage-secrets.env
+set +a
+kubectl -n backstage create secret generic postgres-secrets \
+  --from-literal=POSTGRES_HOST="$POSTGRES_HOST" \
+  --from-literal=POSTGRES_PORT="$POSTGRES_PORT" \
+  --from-literal=POSTGRES_USER="$POSTGRES_USER" \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n backstage create secret generic backstage-secrets \
+  --from-literal=BACKSTAGE_BASE_URL="$BACKSTAGE_BASE_URL" \
+  --from-literal=GITHUB_TOKEN="$GITHUB_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
 rm /tmp/backstage-secrets.env
 ```
 

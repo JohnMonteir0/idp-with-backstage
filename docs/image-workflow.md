@@ -33,7 +33,7 @@ Changes to the Backstage application, workflow, `docker/`, or deployment update 
    aws iam put-role-policy --role-name github-backstage-build --policy-name ecr-publish --policy-document file://docs/aws/github-build-permissions-policy.json
    ```
 
-   This role only publishes to ECR; it does not access EKS or Cloudflare. The trust policy permits this repository's `main` branch. Keep workflow branch filters and the trust policy aligned if you rename the branch. If you configure a GitHub Environment later, update the OIDC subject accordingly.
+   This role only publishes to ECR; it does not access EKS or Cloudflare. GitHub uses this repository's immutable OIDC subject: `repo:JohnMonteir0@88355956/idp-with-backstage@1377758631:ref:refs/heads/main`. GitHub repositories created after July 15, 2026 use owner and repository IDs in the subject claim. Keep workflow branch filters and the trust policy aligned if you rename the branch. If you configure a GitHub Environment later, the subject changes to an environment form and must be updated accordingly.
 
 3. Set `AWS_REGION` as a **repository variable** under **Settings → Secrets and variables → Actions → Variables**. Set every `BACKSTAGE_*` entry below as a **repository secret** under **Settings → Secrets and variables → Actions → Secrets**:
 

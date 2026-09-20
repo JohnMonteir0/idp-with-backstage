@@ -85,7 +85,7 @@ spec:
     name: Generate database manifests
     action: fetch:template
     input:
-      url: ./skeleton
+      url: https://github.com/JohnMonteir0/idp-with-backstage/tree/main/catalog/templates/rds-postgres/skeleton
       targetPath: ./generated
       values:
         name: ${{ parameters.name }}

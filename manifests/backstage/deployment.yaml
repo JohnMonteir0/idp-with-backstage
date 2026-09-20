@@ -1,11 +1,10 @@
-# kubernetes/backstage.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backstage
   namespace: backstage
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: backstage
@@ -21,6 +20,17 @@ spec:
           ports:
             - name: http
               containerPort: 7007
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: APP_CONFIG_app_baseUrl
+              value: http://backstage-prod.107363237542.montlabz.com
+            - name: APP_CONFIG_backend_baseUrl
+              value: http://backstage-prod.107363237542.montlabz.com
+            - name: APP_CONFIG_backend_cors_origin
+              value: http://backstage-prod.107363237542.montlabz.com
+            - name: APP_CONFIG_backend_csp_upgradeInsecureRequests
+              value: "false"
           envFrom:
             - secretRef:
                 name: postgres-secrets

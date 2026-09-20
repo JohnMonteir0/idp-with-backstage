@@ -19,4 +19,4 @@ spec:
           service:
             name: backstage
             port:
-              number: 7007
+              name: http

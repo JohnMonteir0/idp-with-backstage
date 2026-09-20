@@ -20,7 +20,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: backstage
-        image: REPLACE_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/backstage:REPLACE_IMAGE_TAG
+        image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:c493c38936c4ea86a94d76623a28526795afd603ee40ae5034f0b6864a5a7cf2
         command:
         - node
         - packages/backend

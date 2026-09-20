@@ -38,7 +38,7 @@ Replace the image/account placeholders:
 rg -n 'REPLACE_|example.com|main' argocd platform catalog docs
 ```
 
-Set the runtime IAM role ARN in both `platform/crossplane/providers/*-runtime.yaml`. Set your image in `manifests/backstage/deployment.yaml`. Defaults are `argocd`, `crossplane-system`, and `backstage` namespaces; update application destinations, project destinations, IAM trust subjects and manifests if yours differ.
+Set the runtime IAM role ARN in both `platform/crossplane/providers/*-runtime.yaml`. Set your image in `manifests/backstage/backstage-deployment.yaml`. Defaults are `argocd`, `crossplane-system`, and `backstage` namespaces; update application destinations, project destinations, IAM trust subjects and manifests if yours differ.
 
 The community AWS providers are pinned to `v2.0.0` and use the cluster-scoped `*.aws.upbound.io` APIs. These APIs are also supported on Crossplane v2. Check your installed Crossplane version and package compatibility before adopting these packages:
 
@@ -108,6 +108,8 @@ kubectl -n backstage create secret generic postgres-secrets \
 kubectl -n backstage create secret generic backstage-secrets \
   --from-literal=BACKSTAGE_BASE_URL="$BACKSTAGE_BASE_URL" \
   --from-literal=GITHUB_TOKEN="$GITHUB_TOKEN" \
+  --from-literal=AUTH_GITHUB_CLIENT_ID="$AUTH_GITHUB_CLIENT_ID" \
+  --from-literal=AUTH_GITHUB_CLIENT_SECRET="$AUTH_GITHUB_CLIENT_SECRET" \
   --dry-run=client -o yaml | kubectl apply -f -
 rm /tmp/backstage-secrets.env
 ```

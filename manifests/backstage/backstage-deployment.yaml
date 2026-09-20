@@ -20,6 +20,14 @@ spec:
           ports:
             - name: http
               containerPort: 7007
+          command: [node, packages/backend]
+          args:
+            - --config
+            - app-config.yaml
+            - --config
+            - app-config.production.yaml
+            - --config
+            - /app/config/app-config.platform.yaml
           env:
             - name: NODE_ENV
               value: production
@@ -36,3 +44,11 @@ spec:
                 name: postgres-secrets
             - secretRef:
                 name: backstage-secrets
+          volumeMounts:
+            - name: platform-config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: platform-config
+          configMap:
+            name: backstage-platform-config

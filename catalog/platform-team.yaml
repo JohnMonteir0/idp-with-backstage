@@ -6,4 +6,19 @@ spec:
   type: team
   profile:
     displayName: Platform team
+  members:
+    - johnmonteiro
   children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: johnmonteiro
+  annotations:
+    # GitHub's immutable numeric user ID for https://github.com/JohnMonteir0.
+    github.com/user-id: '88355956'
+spec:
+  profile:
+    displayName: John Monteiro
+  memberOf:
+    - platform-team

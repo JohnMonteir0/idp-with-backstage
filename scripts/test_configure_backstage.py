@@ -37,16 +37,16 @@ class ConfigureTests(unittest.TestCase):
         self.assertEqual(ingress['metadata']['annotations']['ingress.cilium.io/backend-service-port'], 'http')
         for prefix in ('external-dns.alpha.kubernetes.io', 'external-dns.kubernetes.io'):
             self.assertEqual(ingress['metadata']['annotations'][prefix + '/hostname'], hostname)
-        deployment = yaml.safe_load((directory / 'deployment.yaml').read_text())
+        deployment = yaml.safe_load((directory / 'backstage-deployment.yaml').read_text())
         container = deployment['spec']['template']['spec']['containers'][0]
         self.assertEqual(container['image'], self.env['IMAGE'])
         self.assertIn({'name': 'BACKSTAGE_BASE_URL', 'value': 'http://' + hostname}, container['env'])
-        before = (directory / 'deployment.yaml').read_text()
+        before = (directory / 'backstage-deployment.yaml').read_text()
         module.configure(self.root, self.env)
-        self.assertEqual((directory / 'deployment.yaml').read_text(), before)
+        self.assertEqual((directory / 'backstage-deployment.yaml').read_text(), before)
 
     def test_invalid_inputs_do_not_write(self):
-        path = self.root / 'manifests/backstage/deployment.yaml'
+        path = self.root / 'manifests/backstage/backstage-deployment.yaml'
         before = path.read_text()
         for field, invalid in [('AWS_ACCOUNT_ID', 'bad'), ('BACKSTAGE_ENVIRONMENT', '../prod'),
                                ('IMAGE', 'untrusted/image:latest'),

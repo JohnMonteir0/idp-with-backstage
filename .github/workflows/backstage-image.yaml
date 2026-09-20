@@ -121,7 +121,7 @@ jobs:
           branch: automation/backstage-image
           base: main
           add-paths: |
-            manifests/backstage/deployment.yaml
+            manifests/backstage/backstage-deployment.yaml
             manifests/backstage/ingress.yaml
           commit-message: 'Deploy Backstage image and configure ExternalDNS'
           title: 'Deploy Backstage image'

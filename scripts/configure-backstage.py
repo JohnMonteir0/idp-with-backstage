@@ -22,7 +22,7 @@ def configure(root, env):
     if proxied not in ('true', 'false'):
         raise ValueError('Invalid CLOUDFLARE_PROXIED')
     directory = Path(root) / 'manifests/backstage'
-    deployment_path = directory / 'deployment.yaml'
+    deployment_path = directory / 'backstage-deployment.yaml'
     deployment = yaml.safe_load(deployment_path.read_text())
     container = next(c for c in deployment['spec']['template']['spec']['containers'] if c['name'] == 'backstage')
     container['image'] = image

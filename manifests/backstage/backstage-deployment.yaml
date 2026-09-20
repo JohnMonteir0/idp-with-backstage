@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: backstage
-        image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:97de63c470cc3bd2e25fffd9312d4e7a870da0361d28e455d6a717a3d4947707
+        image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:7ef865538706c42ab48056f80d949a826bac3b3ee245150b565b949f139b424b
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

@@ -35,8 +35,7 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
       BACKSTAGE_BUILD_ROLE_ARN: ${{ secrets.BACKSTAGE_BUILD_ROLE_ARN }}
       ECR_REPOSITORY: ${{ secrets.BACKSTAGE_ECR_REPOSITORY || 'backstage' }}
-      BACKSTAGE_ENVIRONMENT: ${{ secrets.BACKSTAGE_ENVIRONMENT || 'dev' }}
-      CLOUDFLARE_PROXIED: ${{ secrets.BACKSTAGE_CLOUDFLARE_PROXIED || 'false' }}
+      BACKSTAGE_ENVIRONMENT: ${{ secrets.BACKSTAGE_ENVIRONMENT || 'prod' }}
     steps:
       - uses: actions/checkout@v5
         with:

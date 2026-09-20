@@ -1,3 +1,4 @@
+# kubernetes/postgres.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,39 +14,37 @@ spec:
       labels:
         app: postgres
     spec:
-      securityContext:
-        fsGroup: 999
       containers:
         - name: postgres
           image: postgres:16-alpine
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: 'IfNotPresent'
           ports:
-            - name: postgres
-              containerPort: 5432
+            - containerPort: 5432
           envFrom:
             - secretRef:
                 name: postgres-secrets
           env:
-            - name: POSTGRES_DB
-              value: backstage
-            - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_HOST
+              value: postgres.backstage
+            - name: POSTGRES_PORT
+              value: '5432'
           volumeMounts:
-            - name: postgres-data
-              mountPath: /var/lib/postgresql/data
-          readinessProbe:
-            exec:
-              command: [sh, -c, 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"']
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
+            - mountPath: /var/lib/postgresql/data
+              name: postgresdb
+              subPath: data
       volumes:
-        - name: postgres-data
+        - name: postgresdb
           persistentVolumeClaim:
             claimName: postgres-storage-claim
+---
+# kubernetes/postgres-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: backstage
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432

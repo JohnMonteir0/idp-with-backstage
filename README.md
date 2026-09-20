@@ -16,7 +16,7 @@ flowchart LR
 
 The templates accept an existing VPC, two or more private subnet IDs, and a client security group. They create a database subnet group and a dedicated security group allowing PostgreSQL from that client group. They do not create VPCs/subnets or query AWS for dropdown choices. RDS uses Multi-AZ; Aurora creates two instances. AWS chooses its default engine version; pin a supported `engineVersion` in the skeletons if your organization requires one.
 
-This repository contains deployment configuration and templates, not Backstage application source. The included GitHub Actions workflow builds your existing application source repository after you add the GitHub scaffolder module described below. EKS, Argo CD, Crossplane, and the portal's own PostgreSQL database must already exist.
+This repository contains the Backstage application workspace, deployment configuration, and database templates. The included GitHub Actions workflow builds the application from this repository and publishes it to ECR. EKS, Argo CD, Crossplane, and the portal's own PostgreSQL database must already exist.
 
 | Path | Purpose |
 | --- | --- |
@@ -69,7 +69,7 @@ The permissions example supports the resources generated here, including RDS-man
 
 ## 3. Prepare Backstage
 
-In your **Backstage application's source repository**, install the GitHub action module:
+The generated Backstage application in this repository already includes the GitHub scaffolder module. To update it later, run this from the repository root:
 
 ```sh
 yarn --cwd packages/backend add @backstage/plugin-scaffolder-backend-module-github

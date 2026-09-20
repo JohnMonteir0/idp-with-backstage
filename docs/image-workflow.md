@@ -12,13 +12,11 @@ The account ID comes from `aws sts get-caller-identity` after GitHub assumes the
 
 ## Application source
 
-This repository currently contains infrastructure and templates, not an application workspace. Set `BACKSTAGE_SOURCE_REPOSITORY` to your existing Backstage source repository, with `BACKSTAGE_SOURCE_REVISION` set to a reviewed **full 40-character commit SHA**. The workflow checks it out into a temporary ignored directory.
-
-The source must use the standard Backstage workspace with a committed `yarn.lock`, pinned Yarn via `packageManager`/Corepack, `tsc` and `build:backend` scripts, `packages/backend/Dockerfile`, `app-config.yaml`, and `app-config.production.yaml`. This is a separate Backstage application repository; this infrastructure repository and an ECR URI cannot be used as `BACKSTAGE_SOURCE_REPOSITORY`. It must support Node 22 and Yarn's `--immutable` flag. The workflow fetches the exact commit with Git, so a private source repository needs `BACKSTAGE_SOURCE_TOKEN` with Contents read access. The image must include both config files and the backend bundle in `/app`, and run with UID 1000. Preserve production authentication and include the GitHub scaffolder module described in the root README. If your app differs, adapt the build commands and source Dockerfile accordingly.
+This repository now includes the Backstage application workspace at the repository root. It has a committed `yarn.lock`, pinned Yarn via Corepack, `tsc` and `build:backend` scripts, `packages/backend/Dockerfile`, `app-config.yaml`, and `app-config.production.yaml`. The workflow builds this checked-out repository directly; no source repository secret is needed. Preserve production authentication and include the GitHub scaffolder module described in the root README.
 
 The source Dockerfile remains responsible for packaging the app and its dependencies. `docker/Dockerfile` adds the public AWS RDS certificate bundle expected by this deployment. No application credentials are passed into the image build. The workflow builds Linux amd64 images; ARM-only EKS node pools require an ARM build/runner adjustment.
 
-Changes in another source repository do not automatically trigger this repository's workflow. Update the source SHA secret, then use **Actions → Build Backstage and propose deployment → Run workflow** on `main`. Changes to this repo's workflow, `docker/`, or the deployment update script also trigger a build. The immutable source SHA makes each build's source explicit. A later source-repo workflow can dispatch this workflow if you want that additional automation.
+Changes to the Backstage application, workflow, `docker/`, or deployment update script trigger a build. Use **Actions → Build Backstage and propose deployment → Run workflow** on `main` for a manual build.
 
 ## GitHub and AWS setup
 
@@ -43,14 +41,10 @@ Changes in another source repository do not automatically trigger this repositor
    | --- | --- |
    | `AWS_REGION` | ECR region, for example `us-east-1` |
    | `BACKSTAGE_BUILD_ROLE_ARN` | `arn:aws:iam::<account>:role/github-backstage-build` |
-   | `BACKSTAGE_SOURCE_REPOSITORY` | `owner/repo` containing your Backstage application; HTTPS and SSH Git URL forms are also accepted |
-   | `BACKSTAGE_SOURCE_REVISION` | Full source commit SHA |
    | `BACKSTAGE_ECR_REPOSITORY` | Defaults to `backstage` |
    | `BACKSTAGE_ENVIRONMENT` | Defaults to `dev`, e.g. `prod` |
    | `BACKSTAGE_TLS_SECRET_NAME` | Defaults to `backstage-tls` |
    | `BACKSTAGE_CLOUDFLARE_PROXIED` | Defaults to `false`; see Cloudflare requirements below |
-
-   For a private source repo, also set **secret** `BACKSTAGE_SOURCE_TOKEN` to a token with Contents read access to that repo. The automatic GitHub token only accesses this repository; a public source can be checked out without a separate token.
 
 4. Under **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The workflow requests Contents and Pull requests write access for its deployment PR. It does not approve or merge its own PR. If your organization prevents bot-created PRs, the PR step needs an approved GitHub App token. PRs created with the built-in token do not trigger ordinary `pull_request` workflows; use an App token for that step if required checks depend on such triggers.
 

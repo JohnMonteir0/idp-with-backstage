@@ -20,7 +20,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: backstage
-        image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:c493c38936c4ea86a94d76623a28526795afd603ee40ae5034f0b6864a5a7cf2
+        image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:f80fb5721d26be487c4c1b11fb8a3c1783d6a54ed2be3ffbaa94310afb4e2e6d
         command:
         - node
         - packages/backend
@@ -38,7 +38,7 @@ spec:
         - name: NODE_ENV
           value: production
         - name: BACKSTAGE_BASE_URL
-          value: http://backstage-dev.REPLACE_ACCOUNT_ID.montlabz.com
+          value: http://backstage-dev.107363237542.montlabz.com
         envFrom:
         - secretRef:
             name: postgres-secrets

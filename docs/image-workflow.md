@@ -18,7 +18,7 @@ The source must use the standard Backstage workspace with a committed `yarn.lock
 
 The source Dockerfile remains responsible for packaging the app and its dependencies. `docker/Dockerfile` adds the public AWS RDS certificate bundle expected by this deployment. No application credentials are passed into the image build. The workflow builds Linux amd64 images; ARM-only EKS node pools require an ARM build/runner adjustment.
 
-Changes in another source repository do not automatically trigger this repository's workflow. Update the source SHA variable, then use **Actions → Build Backstage and propose deployment → Run workflow** on `main`. Changes to this repo's workflow, `docker/`, or the deployment update script also trigger a build. The immutable source SHA makes each build's source explicit. A later source-repo workflow can dispatch this workflow if you want that additional automation.
+Changes in another source repository do not automatically trigger this repository's workflow. Update the source SHA secret, then use **Actions → Build Backstage and propose deployment → Run workflow** on `main`. Changes to this repo's workflow, `docker/`, or the deployment update script also trigger a build. The immutable source SHA makes each build's source explicit. A later source-repo workflow can dispatch this workflow if you want that additional automation.
 
 ## GitHub and AWS setup
 
@@ -37,9 +37,9 @@ Changes in another source repository do not automatically trigger this repositor
 
    This role only publishes to ECR; it does not access EKS or Cloudflare. The trust policy permits this repository's `main` branch. Keep workflow branch filters and the trust policy aligned if you rename the branch. If you configure a GitHub Environment later, update the OIDC subject accordingly.
 
-3. Set these **repository variables** under **Settings → Secrets and variables → Actions → Variables**:
+3. Set `AWS_REGION` as a **repository variable** under **Settings → Secrets and variables → Actions → Variables**. Set every `BACKSTAGE_*` entry below as a **repository secret** under **Settings → Secrets and variables → Actions → Secrets**:
 
-   | Variable | Value |
+   | Setting | Value |
    | --- | --- |
    | `AWS_REGION` | ECR region, for example `us-east-1` |
    | `BACKSTAGE_BUILD_ROLE_ARN` | `arn:aws:iam::<account>:role/github-backstage-build` |
@@ -56,7 +56,7 @@ Changes in another source repository do not automatically trigger this repositor
 
 5. Run the workflow on `main`. Review the `automation/backstage-image` PR and merge it. The Argo Application must already be connected to this repository and tracking `main` as described in the root README. No kubeconfig or manual `kubectl set image` is used by CI.
 
-There is one deployment directory and one automation PR branch. The environment variable names this deployment; it does not create isolated dev/prod deployments. Introduce separate overlays and Argo Applications before using this repository to deploy multiple environments concurrently.
+There is one deployment directory and one automation PR branch. The environment setting names this deployment; it does not create isolated dev/prod deployments. Introduce separate overlays and Argo Applications before using this repository to deploy multiple environments concurrently.
 
 ## Cilium, TLS and automatic Cloudflare DNS
 

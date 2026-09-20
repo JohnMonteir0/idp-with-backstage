@@ -27,13 +27,13 @@ jobs:
       id-token: write
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
-      AWS_ROLE_ARN: ${{ vars.BACKSTAGE_BUILD_ROLE_ARN }}
-      SOURCE_REPOSITORY: ${{ vars.BACKSTAGE_SOURCE_REPOSITORY }}
-      SOURCE_REVISION: ${{ vars.BACKSTAGE_SOURCE_REVISION }}
-      ECR_REPOSITORY: ${{ vars.BACKSTAGE_ECR_REPOSITORY || 'backstage' }}
-      BACKSTAGE_ENVIRONMENT: ${{ vars.BACKSTAGE_ENVIRONMENT || 'dev' }}
-      TLS_SECRET_NAME: ${{ vars.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
-      CLOUDFLARE_PROXIED: ${{ vars.BACKSTAGE_CLOUDFLARE_PROXIED || 'false' }}
+      AWS_ROLE_ARN: ${{ secrets.BACKSTAGE_BUILD_ROLE_ARN }}
+      SOURCE_REPOSITORY: ${{ secrets.BACKSTAGE_SOURCE_REPOSITORY }}
+      SOURCE_REVISION: ${{ secrets.BACKSTAGE_SOURCE_REVISION }}
+      ECR_REPOSITORY: ${{ secrets.BACKSTAGE_ECR_REPOSITORY || 'backstage' }}
+      BACKSTAGE_ENVIRONMENT: ${{ secrets.BACKSTAGE_ENVIRONMENT || 'dev' }}
+      TLS_SECRET_NAME: ${{ secrets.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
+      CLOUDFLARE_PROXIED: ${{ secrets.BACKSTAGE_CLOUDFLARE_PROXIED || 'false' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,9 +42,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for variable in AWS_REGION AWS_ROLE_ARN SOURCE_REPOSITORY SOURCE_REVISION; do
+          if [[ -z "$AWS_REGION" ]]; then
+            echo "::error::Missing GitHub repository variable: AWS_REGION"
+            exit 1
+          fi
+          declare -A required_secrets=(
+            [AWS_ROLE_ARN]=BACKSTAGE_BUILD_ROLE_ARN
+            [SOURCE_REPOSITORY]=BACKSTAGE_SOURCE_REPOSITORY
+            [SOURCE_REVISION]=BACKSTAGE_SOURCE_REVISION
+          )
+          for variable in "${!required_secrets[@]}"; do
             if [[ -z "${!variable}" ]]; then
-              echo "::error::Missing GitHub repository variable: $variable (see docs/image-workflow.md)"
+              echo "::error::Missing GitHub repository secret: ${required_secrets[$variable]} (see docs/image-workflow.md)"
               exit 1
             fi
           done

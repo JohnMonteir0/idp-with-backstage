@@ -1,0 +1,16 @@
+apiVersion: rds.aws.upbound.io/v1beta1
+kind: SubnetGroup
+metadata:
+  name: ${{ values.name }}-subnets
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: ${{ values.name }}
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: ${{ values.region }}
+    description: Private database subnets
+    subnetIds: ${{ values.subnetIds | dump }}

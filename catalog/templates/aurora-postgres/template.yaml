@@ -1,0 +1,105 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: aurora-postgres
+  title: Aurora PostgreSQL
+  description: Request a private PostgreSQL database through a GitHub pull request.
+  tags:
+  - aws
+  - crossplane
+  - database
+spec:
+  owner: group:default/platform-team
+  type: resource
+  parameters:
+  - title: Database
+    required:
+    - name
+    - databaseName
+    - region
+    - instanceClass
+    properties:
+      name:
+        title: Unique resource name
+        type: string
+        pattern: ^[a-z][a-z0-9]*(-[a-z0-9]+)*$
+        maxLength: 40
+      databaseName:
+        title: Initial database name
+        type: string
+        pattern: ^[a-z][a-z0-9]{0,30}$
+        default: appdb
+      region:
+        title: AWS region
+        type: string
+        enum:
+        - us-east-1
+        - us-east-2
+        - us-west-2
+        - sa-east-1
+        - eu-west-1
+        default: us-east-1
+      instanceClass:
+        title: Instance class
+        type: string
+        enum:
+        - db.r6g.large
+        - db.r6g.xlarge
+        default: db.r6g.large
+  - title: Network
+    required:
+    - vpcId
+    - subnetIds
+    - clientSecurityGroupId
+    properties:
+      vpcId:
+        title: Existing VPC ID
+        type: string
+        pattern: ^vpc-([0-9a-f]{8}|[0-9a-f]{17})$
+      subnetIds:
+        title: Existing private subnet IDs
+        description: Select at least two subnets in different availability zones,
+          all in the selected VPC and region.
+        type: array
+        minItems: 2
+        uniqueItems: true
+        items:
+          type: string
+          pattern: ^subnet-([0-9a-f]{8}|[0-9a-f]{17})$
+      clientSecurityGroupId:
+        title: Allowed client security group ID
+        description: Existing application/pod/node security group in this VPC that
+          can connect on TCP 5432.
+        type: string
+        pattern: ^sg-([0-9a-f]{8}|[0-9a-f]{17})$
+  steps:
+  - id: render
+    name: Generate database manifests
+    action: fetch:template
+    input:
+      url: ./skeleton
+      targetPath: ./generated
+      values:
+        name: ${{ parameters.name }}
+        databaseName: ${{ parameters.databaseName }}
+        region: ${{ parameters.region }}
+        instanceClass: ${{ parameters.instanceClass }}
+        vpcId: ${{ parameters.vpcId }}
+        subnetIds: ${{ parameters.subnetIds }}
+        clientSecurityGroupId: ${{ parameters.clientSecurityGroupId }}
+  - id: publish
+    name: Open provisioning pull request
+    action: publish:github:pull-request
+    input:
+      repoUrl: github.com?owner=JohnMonteir0&repo=idp-with-backstage
+      targetBranchName: main
+      branchName: database/${{ parameters.name }}
+      title: Create aurora-postgres database ${{ parameters.name }}
+      description: Provision via Crossplane after review. Confirm subnet AZs, VPC
+        membership, instance availability and cost before merging.
+      sourcePath: ./generated
+      targetPath: requests/databases/${{ parameters.name }}
+  output:
+    links:
+    - title: Review provisioning pull request
+      url: ${{ steps.publish.output.remoteUrl }}

@@ -1,0 +1,131 @@
+name: Build Backstage and propose deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/backstage-image.yaml'
+      - 'docker/**'
+      - 'scripts/configure-backstage.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backstage-image
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.BACKSTAGE_BUILD_ROLE_ARN }}
+      SOURCE_REPOSITORY: ${{ vars.BACKSTAGE_SOURCE_REPOSITORY }}
+      SOURCE_REVISION: ${{ vars.BACKSTAGE_SOURCE_REVISION }}
+      ECR_REPOSITORY: ${{ vars.BACKSTAGE_ECR_REPOSITORY || 'backstage' }}
+      BACKSTAGE_ENVIRONMENT: ${{ vars.BACKSTAGE_ENVIRONMENT || 'dev' }}
+      TLS_SECRET_NAME: ${{ vars.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
+      CLOUDFLARE_PROXIED: ${{ vars.BACKSTAGE_CLOUDFLARE_PROXIED || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for variable in AWS_REGION AWS_ROLE_ARN SOURCE_REPOSITORY SOURCE_REVISION; do
+            if [[ -z "${!variable}" ]]; then
+              echo "::error::Missing GitHub repository variable: $variable (see docs/image-workflow.md)"
+              exit 1
+            fi
+          done
+          [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo 'Source revision must be a full commit SHA'; exit 1; }
+      - name: Checkout existing Backstage application
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ env.SOURCE_REVISION }}
+          token: ${{ secrets.BACKSTAGE_SOURCE_TOKEN || github.token }}
+          path: .build-source
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build application bundle
+        working-directory: .build-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f yarn.lock
+          test -f packages/backend/Dockerfile
+          test -f app-config.production.yaml
+          corepack enable
+          yarn install --immutable
+          yarn tsc
+          yarn build:backend
+      - name: Build runtime image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build -f .build-source/packages/backend/Dockerfile -t backstage-app:build .build-source
+          curl --fail --silent --show-error --location --retry 3 \
+            https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+            --output docker/global-bundle.pem
+          docker build --build-arg BASE_IMAGE=backstage-app:build -f docker/Dockerfile -t backstage-runtime:build docker
+      - name: Assume ECR publisher role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Publish image and calculate hostname
+        id: image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          account_id=$(aws sts get-caller-identity --query Account --output text)
+          image="$REGISTRY/$ECR_REPOSITORY:${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker tag backstage-runtime:build "$image"
+          docker push "$image"
+          digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$image")
+          echo "image=$digest" >> "$GITHUB_OUTPUT"
+          echo "account_id=$account_id" >> "$GITHUB_OUTPUT"
+      - name: Update deployment and ingress
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          AWS_ACCOUNT_ID: ${{ steps.image.outputs.account_id }}
+        run: |
+          python3 -m pip install --disable-pip-version-check PyYAML==6.0.2
+          python3 scripts/configure-backstage.py
+          kubectl kustomize platform/backstage > /tmp/backstage-rendered.yaml
+      - name: Open deployment pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/backstage-image
+          base: main
+          add-paths: |
+            platform/backstage/deployment.yaml
+            platform/backstage/ingress.yaml
+          commit-message: 'Deploy Backstage image and configure ExternalDNS'
+          title: 'Deploy Backstage image'
+          body: |
+            Updates Backstage to `${{ steps.image.outputs.image }}`.
+
+            Source: `${{ env.SOURCE_REPOSITORY }}@${{ env.SOURCE_REVISION }}`.
+            Environment: `${{ env.BACKSTAGE_ENVIRONMENT }}`.
+
+            Review and merge to let the existing Argo CD Backstage Application sync.
+            The ingress hostname, ExternalDNS annotations and Backstage URL are updated together.

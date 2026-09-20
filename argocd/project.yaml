@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: idp
+  namespace: argocd
+spec:
+  description: Backstage and Crossplane database provisioning
+  sourceRepos:
+  - https://github.com/JohnMonteir0/idp-with-backstage.git
+  destinations:
+  - server: https://kubernetes.default.svc
+    namespace: backstage
+  - server: https://kubernetes.default.svc
+    namespace: crossplane-system
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  - group: pkg.crossplane.io
+    kind: Provider
+  - group: pkg.crossplane.io
+    kind: DeploymentRuntimeConfig
+  - group: aws.upbound.io
+    kind: ProviderConfig
+  - group: rds.aws.upbound.io
+    kind: '*'
+  - group: ec2.aws.upbound.io
+    kind: SecurityGroup
+  - group: ec2.aws.upbound.io
+    kind: SecurityGroupRule
+  namespaceResourceWhitelist:
+  - group: ''
+    kind: ConfigMap
+  - group: ''
+    kind: Service
+  - group: ''
+    kind: ServiceAccount
+  - group: apps
+    kind: Deployment
+  - group: networking.k8s.io
+    kind: Ingress

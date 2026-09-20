@@ -1,0 +1,16 @@
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: SecurityGroup
+metadata:
+  name: ${{ values.name }}-db
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: ${{ values.name }}
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: ${{ values.region }}
+    description: PostgreSQL access from application security group
+    vpcId: ${{ values.vpcId }}

@@ -1,0 +1,32 @@
+app:
+  title: Internal Developer Portal
+  baseUrl: ${BACKSTAGE_BASE_URL}
+backend:
+  baseUrl: ${BACKSTAGE_BASE_URL}
+  listen:
+    port: 7007
+    host: 0.0.0.0
+  cors:
+    origin: ${BACKSTAGE_BASE_URL}
+    credentials: true
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+      ssl:
+        rejectUnauthorized: true
+        ca:
+          $file: /app/certs/global-bundle.pem
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+catalog:
+  rules:
+    - allow: [Component, System, API, Resource, Location, Template, Group, User, Domain]
+  locations:
+    - type: url
+      target: https://github.com/JohnMonteir0/idp-with-backstage/blob/main/catalog/catalog-info.yaml

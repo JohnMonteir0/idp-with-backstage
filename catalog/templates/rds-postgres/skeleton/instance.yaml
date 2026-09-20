@@ -1,0 +1,33 @@
+apiVersion: rds.aws.upbound.io/v1beta1
+kind: Instance
+metadata:
+  name: ${{ values.name }}
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: ${{ values.name }}
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: ${{ values.region }}
+    engine: postgres
+    storageEncrypted: true
+    manageMasterUserPassword: true
+    backupRetentionPeriod: 7
+    deletionProtection: true
+    skipFinalSnapshot: false
+    finalSnapshotIdentifier: ${{ values.name }}-final
+    dbSubnetGroupNameRef:
+      name: ${{ values.name }}-subnets
+    vpcSecurityGroupIdRefs:
+    - name: ${{ values.name }}-db
+    dbName: ${{ values.databaseName }}
+    username: dbadmin
+    instanceClass: ${{ values.instanceClass }}
+    allocatedStorage: ${{ values.storageGiB }}
+    storageType: gp3
+    publiclyAccessible: false
+    multiAz: true
+    autoMinorVersionUpgrade: true

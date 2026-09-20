@@ -1,0 +1,21 @@
+apiVersion: rds.aws.upbound.io/v1beta1
+kind: ClusterInstance
+metadata:
+  name: ${{ values.name }}-1
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: ${{ values.name }}
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: ${{ values.region }}
+    clusterIdentifierRef:
+      name: ${{ values.name }}
+    engine: aurora-postgresql
+    instanceClass: ${{ values.instanceClass }}
+    publiclyAccessible: false
+    autoMinorVersionUpgrade: true
+    promotionTier: 0

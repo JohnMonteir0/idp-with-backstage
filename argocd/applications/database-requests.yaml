@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: database-requests
+  namespace: argocd
+spec:
+  project: idp
+  source:
+    repoURL: https://github.com/JohnMonteir0/idp-with-backstage.git
+    targetRevision: main
+    path: requests/databases
+    directory:
+      recurse: true
+      include: '**/*.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crossplane-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

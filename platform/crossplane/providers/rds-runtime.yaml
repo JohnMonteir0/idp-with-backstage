@@ -1,0 +1,21 @@
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: aws-rds
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: crossplane-aws-rds
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::REPLACE_ACCOUNT_ID:role/crossplane-databases
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+          - name: package-runtime
+            securityContext:
+              allowPrivilegeEscalation: false
+          securityContext:
+            fsGroup: 2000

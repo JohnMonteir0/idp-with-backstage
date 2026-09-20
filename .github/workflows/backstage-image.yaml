@@ -39,6 +39,7 @@ jobs:
         with:
           ref: main
       - name: Validate configuration
+        id: normalize
         shell: bash
         run: |
           set -euo pipefail
@@ -58,10 +59,22 @@ jobs:
             fi
           done
           [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo 'Source revision must be a full commit SHA'; exit 1; }
+          repository="$SOURCE_REPOSITORY"
+          repository="${repository#https://github.com/}"
+          repository="${repository#http://github.com/}"
+          repository="${repository#git@github.com:}"
+          repository="${repository#github.com/}"
+          repository="${repository%.git}"
+          if [[ ! "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::BACKSTAGE_SOURCE_REPOSITORY must be owner/repo or a GitHub URL (received an invalid value)"
+            exit 1
+          fi
+          echo "SOURCE_REPOSITORY=$repository" >> "$GITHUB_ENV"
+          echo "repository=$repository" >> "$GITHUB_OUTPUT"
       - name: Checkout existing Backstage application
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.SOURCE_REPOSITORY }}
+          repository: ${{ steps.normalize.outputs.repository }}
           ref: ${{ env.SOURCE_REVISION }}
           token: ${{ secrets.BACKSTAGE_SOURCE_TOKEN || github.token }}
           path: .build-source

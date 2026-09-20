@@ -43,7 +43,7 @@ Changes in another source repository do not automatically trigger this repositor
    | --- | --- |
    | `AWS_REGION` | ECR region, for example `us-east-1` |
    | `BACKSTAGE_BUILD_ROLE_ARN` | `arn:aws:iam::<account>:role/github-backstage-build` |
-   | `BACKSTAGE_SOURCE_REPOSITORY` | `owner/repo` containing your Backstage application |
+   | `BACKSTAGE_SOURCE_REPOSITORY` | `owner/repo` containing your Backstage application; the workflow also accepts `https://github.com/owner/repo` and SSH Git URLs |
    | `BACKSTAGE_SOURCE_REVISION` | Full source commit SHA |
    | `BACKSTAGE_ECR_REPOSITORY` | Defaults to `backstage` |
    | `BACKSTAGE_ENVIRONMENT` | Defaults to `dev`, e.g. `prod` |

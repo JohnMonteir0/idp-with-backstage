@@ -14,7 +14,7 @@ The account ID comes from `aws sts get-caller-identity` after GitHub assumes the
 
 This repository currently contains infrastructure and templates, not an application workspace. Set `BACKSTAGE_SOURCE_REPOSITORY` to your existing Backstage source repository, with `BACKSTAGE_SOURCE_REVISION` set to a reviewed **full 40-character commit SHA**. The workflow checks it out into a temporary ignored directory.
 
-The source must use the standard Backstage workspace with a committed `yarn.lock`, pinned Yarn via `packageManager`/Corepack, `tsc` and `build:backend` scripts, and `packages/backend/Dockerfile`. It must support Node 22 and Yarn's `--immutable` flag. The image must include `app-config.yaml`, `app-config.production.yaml` and the backend bundle in `/app`, and run with UID 1000. Preserve production authentication and include the GitHub scaffolder module described in the root README. If your app differs, adapt the build commands and source Dockerfile accordingly.
+The source must use the standard Backstage workspace with a committed `yarn.lock`, pinned Yarn via `packageManager`/Corepack, `tsc` and `build:backend` scripts, and `packages/backend/Dockerfile`. It must support Node 22 and Yarn's `--immutable` flag. The workflow fetches the exact commit with Git, so a private source repository needs `BACKSTAGE_SOURCE_TOKEN` with Contents read access. The image must include `app-config.yaml`, `app-config.production.yaml` and the backend bundle in `/app`, and run with UID 1000. Preserve production authentication and include the GitHub scaffolder module described in the root README. If your app differs, adapt the build commands and source Dockerfile accordingly.
 
 The source Dockerfile remains responsible for packaging the app and its dependencies. `docker/Dockerfile` adds the public AWS RDS certificate bundle expected by this deployment. No application credentials are passed into the image build. The workflow builds Linux amd64 images; ARM-only EKS node pools require an ARM build/runner adjustment.
 
@@ -43,7 +43,7 @@ Changes in another source repository do not automatically trigger this repositor
    | --- | --- |
    | `AWS_REGION` | ECR region, for example `us-east-1` |
    | `BACKSTAGE_BUILD_ROLE_ARN` | `arn:aws:iam::<account>:role/github-backstage-build` |
-   | `BACKSTAGE_SOURCE_REPOSITORY` | `owner/repo` containing your Backstage application; the workflow also accepts `https://github.com/owner/repo` and SSH Git URLs |
+   | `BACKSTAGE_SOURCE_REPOSITORY` | `owner/repo` containing your Backstage application; HTTPS and SSH Git URL forms are also accepted |
    | `BACKSTAGE_SOURCE_REVISION` | Full source commit SHA |
    | `BACKSTAGE_ECR_REPOSITORY` | Defaults to `backstage` |
    | `BACKSTAGE_ENVIRONMENT` | Defaults to `dev`, e.g. `prod` |

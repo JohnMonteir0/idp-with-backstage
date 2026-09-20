@@ -35,7 +35,7 @@ jobs:
       TLS_SECRET_NAME: ${{ secrets.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
       CLOUDFLARE_PROXIED: ${{ secrets.BACKSTAGE_CLOUDFLARE_PROXIED || 'false' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
       - name: Validate configuration
@@ -70,16 +70,23 @@ jobs:
             exit 1
           fi
           echo "SOURCE_REPOSITORY=$repository" >> "$GITHUB_ENV"
-          echo "repository=$repository" >> "$GITHUB_OUTPUT"
-      - name: Checkout existing Backstage application
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ steps.normalize.outputs.repository }}
-          ref: ${{ env.SOURCE_REVISION }}
-          token: ${{ secrets.BACKSTAGE_SOURCE_TOKEN || github.token }}
-          path: .build-source
-          persist-credentials: false
-      - uses: actions/setup-node@v4
+      - name: Fetch existing Backstage application
+        env:
+          SOURCE_TOKEN: ${{ secrets.BACKSTAGE_SOURCE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir .build-source
+          git -C .build-source init --quiet
+          git -C .build-source remote add origin "https://github.com/${SOURCE_REPOSITORY}.git"
+          if [[ -n "$SOURCE_TOKEN" ]]; then
+            git -C .build-source -c http.extraheader="AUTHORIZATION: bearer $SOURCE_TOKEN" fetch --depth=1 origin "$SOURCE_REVISION"
+          else
+            git -C .build-source fetch --depth=1 origin "$SOURCE_REVISION"
+          fi
+          git -C .build-source checkout --detach --quiet FETCH_HEAD
+          git -C .build-source config --local remote.origin.url "https://github.com/${SOURCE_REPOSITORY}.git"
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Build application bundle

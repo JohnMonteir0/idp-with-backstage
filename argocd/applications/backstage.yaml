@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/JohnMonteir0/idp-with-backstage.git
     targetRevision: main
-    path: platform/backstage
+    path: manifests/backstage
   destination:
     server: https://kubernetes.default.svc
     namespace: backstage

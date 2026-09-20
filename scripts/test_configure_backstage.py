@@ -18,7 +18,7 @@ class ConfigureTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        shutil.copytree(ROOT / 'platform/backstage', self.root / 'platform/backstage')
+        shutil.copytree(ROOT / 'manifests/backstage', self.root / 'manifests/backstage')
         self.env = {
             'AWS_ACCOUNT_ID': '123456789012', 'BACKSTAGE_ENVIRONMENT': 'prod',
             'IMAGE': '123456789012.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:' + 'a' * 64,
@@ -27,7 +27,7 @@ class ConfigureTests(unittest.TestCase):
 
     def test_consistent_hostname_and_image(self):
         module.configure(self.root, self.env)
-        directory = self.root / 'platform/backstage'
+        directory = self.root / 'manifests/backstage'
         ingress = yaml.safe_load((directory / 'ingress.yaml').read_text())
         hostname = 'backstage-prod.123456789012.montlabz.com'
         self.assertEqual(ingress['spec']['ingressClassName'], 'cilium')
@@ -44,7 +44,7 @@ class ConfigureTests(unittest.TestCase):
         self.assertEqual((directory / 'deployment.yaml').read_text(), before)
 
     def test_invalid_inputs_do_not_write(self):
-        path = self.root / 'platform/backstage/deployment.yaml'
+        path = self.root / 'manifests/backstage/deployment.yaml'
         before = path.read_text()
         for field, invalid in [('AWS_ACCOUNT_ID', 'bad'), ('BACKSTAGE_ENVIRONMENT', '../prod'),
                                ('IMAGE', 'untrusted/image:latest'), ('TLS_SECRET_NAME', ''),

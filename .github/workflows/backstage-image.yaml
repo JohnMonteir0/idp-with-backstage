@@ -116,15 +116,15 @@ jobs:
         run: |
           python3 -m pip install --disable-pip-version-check PyYAML==6.0.2
           python3 scripts/configure-backstage.py
-          kubectl kustomize platform/backstage > /tmp/backstage-rendered.yaml
+          kubectl kustomize manifests/backstage > /tmp/backstage-rendered.yaml
       - name: Open deployment pull request
         uses: peter-evans/create-pull-request@v7
         with:
           branch: automation/backstage-image
           base: main
           add-paths: |
-            platform/backstage/deployment.yaml
-            platform/backstage/ingress.yaml
+            manifests/backstage/deployment.yaml
+            manifests/backstage/ingress.yaml
           commit-message: 'Deploy Backstage image and configure ExternalDNS'
           title: 'Deploy Backstage image'
           body: |

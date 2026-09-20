@@ -21,7 +21,7 @@ This repository contains the Backstage application workspace, deployment configu
 | Path | Purpose |
 | --- | --- |
 | `argocd/` | Project and four independently bootstrapped Applications |
-| `platform/backstage/` | Deployment, Service, Cilium Ingress and generated configuration ConfigMap |
+| `manifests/backstage/` | Deployment, Service, Cilium Ingress and generated configuration ConfigMap |
 | `.github/workflows/backstage-image.yaml` | Build application source, publish to ECR and open a deployment PR |
 | `platform/crossplane/` | AWS RDS/EC2 providers, IRSA runtime configuration and ProviderConfig |
 | `catalog/` | Backstage templates and owning group |
@@ -30,7 +30,7 @@ This repository contains the Backstage application workspace, deployment configu
 
 ## 1. Match the configuration to your cluster
 
-The Git URL is `https://github.com/JohnMonteir0/idp-with-backstage.git`; deployment and PR targets use `main`. Merge this configuration to `main` before bootstrapping, or change **all** references to `main` in `argocd/applications`, `catalog/templates/*/template.yaml` and `platform/backstage/app-config.platform.yaml` to your chosen branch. Do not enable provisioning against an unreviewed development branch.
+The Git URL is `https://github.com/JohnMonteir0/idp-with-backstage.git`; deployment and PR targets use `main`. Merge this configuration to `main` before bootstrapping, or change **all** references to `main` in `argocd/applications`, `catalog/templates/*/template.yaml` and `manifests/backstage/app-config.platform.yaml` to your chosen branch. Do not enable provisioning against an unreviewed development branch.
 
 Replace the image/account placeholders:
 
@@ -38,7 +38,7 @@ Replace the image/account placeholders:
 rg -n 'REPLACE_|example.com|main' argocd platform catalog docs
 ```
 
-Set the runtime IAM role ARN in both `platform/crossplane/providers/*-runtime.yaml`. Set your image in `platform/backstage/deployment.yaml`. Defaults are `argocd`, `crossplane-system`, and `backstage` namespaces; update application destinations, project destinations, IAM trust subjects and manifests if yours differ.
+Set the runtime IAM role ARN in both `platform/crossplane/providers/*-runtime.yaml`. Set your image in `manifests/backstage/deployment.yaml`. Defaults are `argocd`, `crossplane-system`, and `backstage` namespaces; update application destinations, project destinations, IAM trust subjects and manifests if yours differ.
 
 The community AWS providers are pinned to `v2.0.0` and use the cluster-scoped `*.aws.upbound.io` APIs. These APIs are also supported on Crossplane v2. Check your installed Crossplane version and package compatibility before adopting these packages:
 
@@ -172,7 +172,7 @@ Backstage has no Kubernetes service account token or AWS permissions. Database r
 Local checks:
 
 ```sh
-kubectl kustomize platform/backstage > /tmp/backstage-rendered.yaml
+kubectl kustomize manifests/backstage > /tmp/backstage-rendered.yaml
 npm install --prefix /tmp/idp-validation --no-audit --no-fund nunjucks@3.2.4 yaml@2.8.1 ajv@8.17.1
 NODE_PATH=/tmp/idp-validation/node_modules node scripts/validate.cjs
 ```

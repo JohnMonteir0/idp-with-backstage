@@ -1,9 +1,11 @@
+# kubernetes/backstage.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backstage
+  namespace: backstage
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: backstage
@@ -12,63 +14,15 @@ spec:
       labels:
         app: backstage
     spec:
-      automountServiceAccountToken: false
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
-      - name: backstage
-        image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:f80fb5721d26be487c4c1b11fb8a3c1783d6a54ed2be3ffbaa94310afb4e2e6d
-        command:
-        - node
-        - packages/backend
-        args:
-        - --config
-        - app-config.yaml
-        - --config
-        - app-config.production.yaml
-        - --config
-        - /etc/backstage/app-config.platform.yaml
-        ports:
-        - name: http
-          containerPort: 7007
-        env:
-        - name: NODE_ENV
-          value: production
-        - name: BACKSTAGE_BASE_URL
-          value: http://backstage-dev.107363237542.montlabz.com
-        envFrom:
-        - secretRef:
-            name: postgres-secrets
-        - secretRef:
-            name: backstage-secrets
-        volumeMounts:
-        - name: config
-          mountPath: /etc/backstage
-          readOnly: true
-        readinessProbe:
-          tcpSocket:
-            port: http
-          initialDelaySeconds: 15
-        livenessProbe:
-          tcpSocket:
-            port: http
-          initialDelaySeconds: 60
-        resources:
-          requests:
-            cpu: 250m
-            memory: 512Mi
-          limits:
-            cpu: '2'
-            memory: 2Gi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-      volumes:
-      - name: config
-        configMap:
-          name: backstage-platform-config
+        - name: backstage
+          image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:6c0014abd0ce5fd362b393407af286fc4c8dbe855dfed7383fe7a87b01c96459
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 7007
+          envFrom:
+            - secretRef:
+                name: postgres-secrets
+            - secretRef:
+                name: backstage-secrets

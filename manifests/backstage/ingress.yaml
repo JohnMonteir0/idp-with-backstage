@@ -4,17 +4,13 @@ metadata:
   name: backstage
   namespace: backstage
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: backstage-dev.107363237542.montlabz.com
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: 'false'
-    external-dns.kubernetes.io/hostname: backstage-dev.107363237542.montlabz.com
-    external-dns.kubernetes.io/cloudflare-proxied: 'false'
-    ingress.cilium.io/loadbalancer-mode: shared
+    external-dns.alpha.kubernetes.io/hostname: backstage-prod.107363237542.montlabz.com
     ingress.cilium.io/force-https: disabled
     ingress.cilium.io/backend-service-port: http
 spec:
   ingressClassName: cilium
   rules:
-  - host: backstage-dev.107363237542.montlabz.com
+  - host: backstage-prod.107363237542.montlabz.com
     http:
       paths:
       - path: /

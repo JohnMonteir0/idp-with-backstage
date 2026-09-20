@@ -1,0 +1,27 @@
+apiVersion: rds.aws.upbound.io/v1beta1
+kind: Cluster
+metadata:
+  name: testing
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: testing
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: us-east-1
+    engine: aurora-postgresql
+    storageEncrypted: true
+    manageMasterUserPassword: true
+    backupRetentionPeriod: 7
+    deletionProtection: true
+    skipFinalSnapshot: false
+    finalSnapshotIdentifier: testing-final
+    dbSubnetGroupNameRef:
+      name: testing-subnets
+    vpcSecurityGroupIdRefs:
+    - name: testing-db
+    databaseName: appdb
+    masterUsername: dbadmin

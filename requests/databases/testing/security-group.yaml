@@ -1,0 +1,16 @@
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: SecurityGroup
+metadata:
+  name: testing-db
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: testing
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: us-east-1
+    description: PostgreSQL access from application security group
+    vpcId: vpc-03760ec38af5d9210

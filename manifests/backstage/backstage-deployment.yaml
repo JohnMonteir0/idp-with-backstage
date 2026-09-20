@@ -14,41 +14,45 @@ spec:
         app: backstage
     spec:
       containers:
-        - name: backstage
-          image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:6c0014abd0ce5fd362b393407af286fc4c8dbe855dfed7383fe7a87b01c96459
-          imagePullPolicy: IfNotPresent
-          ports:
-            - name: http
-              containerPort: 7007
-          command: [node, packages/backend]
-          args:
-            - --config
-            - app-config.yaml
-            - --config
-            - app-config.production.yaml
-            - --config
-            - /app/config/app-config.platform.yaml
-          env:
-            - name: NODE_ENV
-              value: production
-            - name: APP_CONFIG_app_baseUrl
-              value: http://backstage-prod.107363237542.montlabz.com
-            - name: APP_CONFIG_backend_baseUrl
-              value: http://backstage-prod.107363237542.montlabz.com
-            - name: APP_CONFIG_backend_cors_origin
-              value: http://backstage-prod.107363237542.montlabz.com
-            - name: APP_CONFIG_backend_csp_upgradeInsecureRequests
-              value: "false"
-          envFrom:
-            - secretRef:
-                name: postgres-secrets
-            - secretRef:
-                name: backstage-secrets
-          volumeMounts:
-            - name: platform-config
-              mountPath: /app/config
-              readOnly: true
-      volumes:
+      - name: backstage
+        image: 107363237542.dkr.ecr.us-east-1.amazonaws.com/backstage@sha256:97de63c470cc3bd2e25fffd9312d4e7a870da0361d28e455d6a717a3d4947707
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 7007
+        command:
+        - node
+        - packages/backend
+        args:
+        - --config
+        - app-config.yaml
+        - --config
+        - app-config.production.yaml
+        - --config
+        - /app/config/app-config.platform.yaml
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: APP_CONFIG_app_baseUrl
+          value: http://backstage-prod.107363237542.montlabz.com
+        - name: APP_CONFIG_backend_baseUrl
+          value: http://backstage-prod.107363237542.montlabz.com
+        - name: APP_CONFIG_backend_cors_origin
+          value: http://backstage-prod.107363237542.montlabz.com
+        - name: APP_CONFIG_backend_csp_upgradeInsecureRequests
+          value: 'false'
+        - name: BACKSTAGE_BASE_URL
+          value: http://backstage-prod.107363237542.montlabz.com
+        envFrom:
+        - secretRef:
+            name: postgres-secrets
+        - secretRef:
+            name: backstage-secrets
+        volumeMounts:
         - name: platform-config
-          configMap:
-            name: backstage-platform-config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: platform-config
+        configMap:
+          name: backstage-platform-config

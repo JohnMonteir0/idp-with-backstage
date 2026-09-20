@@ -42,6 +42,7 @@ backend:
       - "'self'"
       - "http:"
       - "https:"
+    upgrade-insecure-requests: false
 
   database:
     client: pg
@@ -71,4 +72,4 @@ catalog:
 
   locations:
     - type: url
-      target: https://github.com/JohnMonteir0/idp-with-backstage/blob/main/catalog/catalog-info.yaml
+      target: https://raw.githubusercontent.com/JohnMonteir0/idp-with-backstage/main/catalog/catalog-info.yaml

@@ -8,6 +8,12 @@ on:
       - '.github/workflows/backstage-image.yaml'
       - 'docker/**'
       - 'scripts/configure-backstage.py'
+      - 'app-config*.yaml'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'packages/**'
+      - 'plugins/**'
+      - 'examples/**'
 
 permissions:
   contents: read
@@ -28,8 +34,6 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ secrets.BACKSTAGE_BUILD_ROLE_ARN }}
-      SOURCE_REPOSITORY: ${{ secrets.BACKSTAGE_SOURCE_REPOSITORY }}
-      SOURCE_REVISION: ${{ secrets.BACKSTAGE_SOURCE_REVISION }}
       ECR_REPOSITORY: ${{ secrets.BACKSTAGE_ECR_REPOSITORY || 'backstage' }}
       BACKSTAGE_ENVIRONMENT: ${{ secrets.BACKSTAGE_ENVIRONMENT || 'dev' }}
       TLS_SECRET_NAME: ${{ secrets.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
@@ -39,7 +43,6 @@ jobs:
         with:
           ref: main
       - name: Validate configuration
-        id: normalize
         shell: bash
         run: |
           set -euo pipefail
@@ -47,57 +50,24 @@ jobs:
             echo "::error::Missing GitHub repository variable: AWS_REGION"
             exit 1
           fi
-          declare -A required_secrets=(
-            [AWS_ROLE_ARN]=BACKSTAGE_BUILD_ROLE_ARN
-            [SOURCE_REPOSITORY]=BACKSTAGE_SOURCE_REPOSITORY
-            [SOURCE_REVISION]=BACKSTAGE_SOURCE_REVISION
-          )
+          declare -A required_secrets=([AWS_ROLE_ARN]=BACKSTAGE_BUILD_ROLE_ARN)
           for variable in "${!required_secrets[@]}"; do
             if [[ -z "${!variable}" ]]; then
               echo "::error::Missing GitHub repository secret: ${required_secrets[$variable]} (see docs/image-workflow.md)"
               exit 1
             fi
           done
-          [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo 'Source revision must be a full commit SHA'; exit 1; }
-          repository="$SOURCE_REPOSITORY"
-          repository="${repository#https://github.com/}"
-          repository="${repository#http://github.com/}"
-          repository="${repository#git@github.com:}"
-          repository="${repository#github.com/}"
-          repository="${repository%.git}"
-          if [[ ! "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
-            echo "::error::BACKSTAGE_SOURCE_REPOSITORY must be owner/repo or a GitHub URL (received an invalid value)"
-            exit 1
-          fi
-          echo "SOURCE_REPOSITORY=$repository" >> "$GITHUB_ENV"
-      - name: Fetch existing Backstage application
-        env:
-          SOURCE_TOKEN: ${{ secrets.BACKSTAGE_SOURCE_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir .build-source
-          git -C .build-source init --quiet
-          git -C .build-source remote add origin "https://github.com/${SOURCE_REPOSITORY}.git"
-          if [[ -n "$SOURCE_TOKEN" ]]; then
-            git -C .build-source -c http.extraheader="AUTHORIZATION: bearer $SOURCE_TOKEN" fetch --depth=1 origin "$SOURCE_REVISION"
-          else
-            git -C .build-source fetch --depth=1 origin "$SOURCE_REVISION"
-          fi
-          git -C .build-source checkout --detach --quiet FETCH_HEAD
-          git -C .build-source config --local remote.origin.url "https://github.com/${SOURCE_REPOSITORY}.git"
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Build application bundle
-        working-directory: .build-source
         shell: bash
         run: |
           set -euo pipefail
           for required_file in yarn.lock packages/backend/Dockerfile app-config.production.yaml; do
             if [[ ! -f "$required_file" ]]; then
-              echo "::error::Backstage source repository is missing $required_file"
-              echo "::error::BACKSTAGE_SOURCE_REPOSITORY must point to the Backstage application repository, not this infrastructure repository or an ECR URI."
+              echo "::error::Backstage application workspace is missing $required_file"
+              echo "::error::The Backstage application workspace is incomplete. Add the missing file to this repository."
               exit 1
             fi
           done
@@ -112,7 +82,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker build -f .build-source/packages/backend/Dockerfile -t backstage-app:build .build-source
+          docker build -f packages/backend/Dockerfile -t backstage-app:build .
           curl --fail --silent --show-error --location --retry 3 \
             https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
             --output docker/global-bundle.pem
@@ -160,7 +130,7 @@ jobs:
           body: |
             Updates Backstage to `${{ steps.image.outputs.image }}`.
 
-            Source: `${{ env.SOURCE_REPOSITORY }}@${{ env.SOURCE_REVISION }}`.
+            Source: this repository at `${{ github.sha }}`.
             Environment: `${{ env.BACKSTAGE_ENVIRONMENT }}`.
 
             Review and merge to let the existing Argo CD Backstage Application sync.

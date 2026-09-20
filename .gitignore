@@ -149,3 +149,6 @@ docker/global-bundle.pem
 # Python validation helpers
 __pycache__/
 *.pyc
+
+# Backstage TypeScript build output
+dist-types/

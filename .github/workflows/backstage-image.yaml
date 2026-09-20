@@ -35,10 +35,11 @@ jobs:
       TLS_SECRET_NAME: ${{ secrets.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
       CLOUDFLARE_PROXIED: ${{ secrets.BACKSTAGE_CLOUDFLARE_PROXIED || 'false' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
       - name: Validate configuration
+        id: normalize
         shell: bash
         run: |
           set -euo pipefail
@@ -58,15 +59,34 @@ jobs:
             fi
           done
           [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo 'Source revision must be a full commit SHA'; exit 1; }
-      - name: Checkout existing Backstage application
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SOURCE_REPOSITORY }}
-          ref: ${{ env.SOURCE_REVISION }}
-          token: ${{ secrets.BACKSTAGE_SOURCE_TOKEN || github.token }}
-          path: .build-source
-          persist-credentials: false
-      - uses: actions/setup-node@v4
+          repository="$SOURCE_REPOSITORY"
+          repository="${repository#https://github.com/}"
+          repository="${repository#http://github.com/}"
+          repository="${repository#git@github.com:}"
+          repository="${repository#github.com/}"
+          repository="${repository%.git}"
+          if [[ ! "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::BACKSTAGE_SOURCE_REPOSITORY must be owner/repo or a GitHub URL (received an invalid value)"
+            exit 1
+          fi
+          echo "SOURCE_REPOSITORY=$repository" >> "$GITHUB_ENV"
+      - name: Fetch existing Backstage application
+        env:
+          SOURCE_TOKEN: ${{ secrets.BACKSTAGE_SOURCE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir .build-source
+          git -C .build-source init --quiet
+          git -C .build-source remote add origin "https://github.com/${SOURCE_REPOSITORY}.git"
+          if [[ -n "$SOURCE_TOKEN" ]]; then
+            git -C .build-source -c http.extraheader="AUTHORIZATION: bearer $SOURCE_TOKEN" fetch --depth=1 origin "$SOURCE_REVISION"
+          else
+            git -C .build-source fetch --depth=1 origin "$SOURCE_REVISION"
+          fi
+          git -C .build-source checkout --detach --quiet FETCH_HEAD
+          git -C .build-source config --local remote.origin.url "https://github.com/${SOURCE_REPOSITORY}.git"
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Build application bundle
@@ -74,12 +94,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f yarn.lock
-          test -f packages/backend/Dockerfile
-          test -f app-config.production.yaml
+          for required_file in yarn.lock packages/backend/Dockerfile app-config.production.yaml; do
+            if [[ ! -f "$required_file" ]]; then
+              echo "::error::Backstage source repository is missing $required_file"
+              echo "::error::BACKSTAGE_SOURCE_REPOSITORY must point to the Backstage application repository, not this infrastructure repository or an ECR URI."
+              exit 1
+            fi
+          done
           corepack enable
+          echo 'Installing Backstage dependencies'
           yarn install --immutable
+          echo 'Type-checking Backstage'
           yarn tsc
+          echo 'Building the Backstage backend bundle'
           yarn build:backend
       - name: Build runtime image
         shell: bash

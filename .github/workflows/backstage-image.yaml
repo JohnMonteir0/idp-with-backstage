@@ -33,7 +33,7 @@ jobs:
       id-token: write
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
-      AWS_ROLE_ARN: ${{ secrets.BACKSTAGE_BUILD_ROLE_ARN }}
+      BACKSTAGE_BUILD_ROLE_ARN: ${{ secrets.BACKSTAGE_BUILD_ROLE_ARN }}
       ECR_REPOSITORY: ${{ secrets.BACKSTAGE_ECR_REPOSITORY || 'backstage' }}
       BACKSTAGE_ENVIRONMENT: ${{ secrets.BACKSTAGE_ENVIRONMENT || 'dev' }}
       TLS_SECRET_NAME: ${{ secrets.BACKSTAGE_TLS_SECRET_NAME || 'backstage-tls' }}
@@ -50,7 +50,7 @@ jobs:
             echo "::error::Missing GitHub repository variable: AWS_REGION"
             exit 1
           fi
-          declare -A required_secrets=([AWS_ROLE_ARN]=BACKSTAGE_BUILD_ROLE_ARN)
+          declare -A required_secrets=([BACKSTAGE_BUILD_ROLE_ARN]=BACKSTAGE_BUILD_ROLE_ARN)
           for variable in "${!required_secrets[@]}"; do
             if [[ -z "${!variable}" ]]; then
               echo "::error::Missing GitHub repository secret: ${required_secrets[$variable]} (see docs/image-workflow.md)"
@@ -90,7 +90,7 @@ jobs:
       - name: Assume ECR publisher role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          role-to-assume: ${{ env.BACKSTAGE_BUILD_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Log in to ECR
         id: ecr

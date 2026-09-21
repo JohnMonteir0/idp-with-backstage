@@ -92,6 +92,10 @@ for (const name of ['rds-postgres', 'aurora-postgres']) {
   for (const resource of resources.filter(r => ['Instance', 'Cluster'].includes(r.kind))) {
     assert.equal(resource.spec.forProvider.finalSnapshotIdentifier, `platform-prod-crossplane-${sample.name}-final`);
   }
+
+  for (const resource of resources.filter(r => r.kind === 'Instance')) {
+    assert.equal(resource.spec.forProvider.identifier, `platform-prod-crossplane-${sample.name}`);
+  }
   const ingress = resources.find(r => r.kind === 'SecurityGroupRule').spec.forProvider;
   assert.equal(ingress.sourceSecurityGroupId, sample.clientSecurityGroupId);
   assert.equal(ingress.fromPort, 5432);

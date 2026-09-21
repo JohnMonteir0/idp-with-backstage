@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: testing2
+  description: PostgreSQL database provisioned through Crossplane.
+  annotations:
+    backstage.io/kubernetes-label-selector: platform.example.org/database=testing2
+  links:
+    - title: AWS RDS console
+      url: "https://console.aws.amazon.com/rds/home?region=us-east-1#databases:"
+spec:
+  type: database
+  owner: group:default/platform-team

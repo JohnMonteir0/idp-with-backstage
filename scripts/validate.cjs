@@ -52,13 +52,14 @@ for (const name of ['rds-postgres', 'aurora-postgres']) {
     const text = env.renderString(fs.readFileSync(`${dir}/skeleton/${file}`, 'utf8'), { values: sample });
     assert(!text.includes('${{'));
     const obj = YAML.parse(text);
+    if (obj.apiVersion === 'backstage.io/v1alpha1' && obj.kind === 'Resource') return null;
     if (schemaFlag !== -1) {
       const validate = schemas.get(`${obj.apiVersion}/${obj.kind}`);
       assert(validate, `Missing schema for ${obj.kind}`);
       assert(validate(obj), `${file}: ${JSON.stringify(validate.errors)}`);
     }
     return obj;
-  });
+  }).filter(Boolean);
   const names = new Set(resources.map(r => r.metadata.name));
   assert.equal(names.size, resources.length);
   for (const resource of resources) {

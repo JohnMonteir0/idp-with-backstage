@@ -13,6 +13,7 @@ app:
     - page:catalog:
         config:
           path: /
+    - entity-content:kubernetes/kubernetes
     # - page:home:
     #     config:
     #       path: /

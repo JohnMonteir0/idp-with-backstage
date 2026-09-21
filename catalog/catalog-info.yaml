@@ -8,3 +8,5 @@ spec:
   - ./templates/rds-postgres/template.yaml
   - ./templates/aurora-postgres/template.yaml
   - ./platform-team.yaml
+  - ../requests/databases/testing/catalog-info.yaml
+  - ../requests/databases/testing2/catalog-info.yaml

@@ -1,0 +1,21 @@
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: SecurityGroupRule
+metadata:
+  name: testing2-postgres
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: testing2
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: us-east-1
+    type: ingress
+    fromPort: 5432
+    toPort: 5432
+    protocol: tcp
+    securityGroupIdRef:
+      name: testing2-db
+    sourceSecurityGroupId: sg-0ed0db46108e89fdc

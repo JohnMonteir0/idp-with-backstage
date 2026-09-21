@@ -85,6 +85,13 @@ for (const name of ['rds-postgres', 'aurora-postgres']) {
   for (const resource of [subnetGroup, securityGroup]) {
     assert.equal(resource.spec.forProvider.tags['crossplane-owner'], 'platform-prod');
   }
+  for (const resource of resources.filter(r => ['Instance', 'Cluster', 'ClusterInstance'].includes(r.kind))) {
+    const suffix = resource.kind === 'ClusterInstance' ? `-${resource.metadata.name.split('-').at(-1)}` : '';
+    assert.equal(resource.metadata.annotations['crossplane.io/external-name'], `platform-prod-crossplane-${sample.name}${suffix}`);
+  }
+  for (const resource of resources.filter(r => ['Instance', 'Cluster'].includes(r.kind))) {
+    assert.equal(resource.spec.forProvider.finalSnapshotIdentifier, `platform-prod-crossplane-${sample.name}-final`);
+  }
   const ingress = resources.find(r => r.kind === 'SecurityGroupRule').spec.forProvider;
   assert.equal(ingress.sourceSecurityGroupId, sample.clientSecurityGroupId);
   assert.equal(ingress.fromPort, 5432);

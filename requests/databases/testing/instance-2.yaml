@@ -4,6 +4,7 @@ metadata:
   name: testing-2
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    crossplane.io/external-name: platform-prod-crossplane-testing-2
   labels:
     platform.example.org/database: testing
 spec:

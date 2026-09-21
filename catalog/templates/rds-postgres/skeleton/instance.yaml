@@ -4,6 +4,7 @@ metadata:
   name: ${{ values.name }}
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    crossplane.io/external-name: platform-prod-crossplane-${{ values.name }}
   labels:
     platform.example.org/database: ${{ values.name }}
 spec:
@@ -18,7 +19,7 @@ spec:
     backupRetentionPeriod: 7
     deletionProtection: true
     skipFinalSnapshot: false
-    finalSnapshotIdentifier: ${{ values.name }}-final
+    finalSnapshotIdentifier: platform-prod-crossplane-${{ values.name }}-final
     dbSubnetGroupNameRef:
       name: ${{ values.name }}-subnets
     vpcSecurityGroupIdRefs:

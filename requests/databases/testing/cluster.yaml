@@ -4,6 +4,7 @@ metadata:
   name: testing
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    crossplane.io/external-name: platform-prod-crossplane-testing
   labels:
     platform.example.org/database: testing
 spec:
@@ -18,7 +19,7 @@ spec:
     backupRetentionPeriod: 7
     deletionProtection: true
     skipFinalSnapshot: false
-    finalSnapshotIdentifier: testing-final
+    finalSnapshotIdentifier: platform-prod-crossplane-testing-final
     dbSubnetGroupNameRef:
       name: testing-subnets
     vpcSecurityGroupIdRefs:

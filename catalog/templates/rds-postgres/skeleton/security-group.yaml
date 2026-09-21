@@ -12,5 +12,8 @@ spec:
     name: aws
   forProvider:
     region: ${{ values.region }}
+    name: platform-prod-crossplane-${{ values.name }}-db
     description: PostgreSQL access from application security group
     vpcId: ${{ values.vpcId }}
+    tags:
+      crossplane-owner: platform-prod

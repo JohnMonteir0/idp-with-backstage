@@ -78,6 +78,13 @@ for (const name of ['rds-postgres', 'aurora-postgres']) {
     }
   }
   assert.deepEqual(resources.find(r => r.kind === 'SubnetGroup').spec.forProvider.subnetIds, sample.subnetIds);
+  const subnetGroup = resources.find(r => r.kind === 'SubnetGroup');
+  const securityGroup = resources.find(r => r.kind === 'SecurityGroup');
+  assert.equal(subnetGroup.metadata.annotations['crossplane.io/external-name'], `platform-prod-crossplane-${sample.name}-subnets`);
+  assert.equal(securityGroup.spec.forProvider.name, `platform-prod-crossplane-${sample.name}-db`);
+  for (const resource of [subnetGroup, securityGroup]) {
+    assert.equal(resource.spec.forProvider.tags['crossplane-owner'], 'platform-prod');
+  }
   const ingress = resources.find(r => r.kind === 'SecurityGroupRule').spec.forProvider;
   assert.equal(ingress.sourceSecurityGroupId, sample.clientSecurityGroupId);
   assert.equal(ingress.fromPort, 5432);

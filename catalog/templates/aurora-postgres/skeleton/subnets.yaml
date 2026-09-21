@@ -4,6 +4,7 @@ metadata:
   name: ${{ values.name }}-subnets
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    crossplane.io/external-name: platform-prod-crossplane-${{ values.name }}-subnets
   labels:
     platform.example.org/database: ${{ values.name }}
 spec:
@@ -14,3 +15,5 @@ spec:
     region: ${{ values.region }}
     description: Private database subnets
     subnetIds: ${{ values.subnetIds | dump }}
+    tags:
+      crossplane-owner: platform-prod

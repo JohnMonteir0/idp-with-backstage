@@ -4,6 +4,7 @@ metadata:
   name: testing-subnets
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    crossplane.io/external-name: platform-prod-crossplane-testing-subnets
   labels:
     platform.example.org/database: testing
 spec:
@@ -14,3 +15,5 @@ spec:
     region: us-east-1
     description: Private database subnets
     subnetIds: ["subnet-0e866758d720de56b","subnet-0188bf582f56dc547"]
+    tags:
+      crossplane-owner: platform-prod

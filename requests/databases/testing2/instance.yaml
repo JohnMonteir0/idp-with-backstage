@@ -13,6 +13,7 @@ spec:
     name: aws
   forProvider:
     region: us-east-1
+    identifier: platform-prod-crossplane-testing2
     engine: postgres
     storageEncrypted: true
     manageMasterUserPassword: true

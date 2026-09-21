@@ -1,0 +1,19 @@
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: SecurityGroup
+metadata:
+  name: testing2-db
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    platform.example.org/database: testing2
+spec:
+  deletionPolicy: Orphan
+  providerConfigRef:
+    name: aws
+  forProvider:
+    region: us-east-1
+    name: platform-prod-crossplane-testing2-db
+    description: PostgreSQL access from application security group
+    vpcId: vpc-03760ec38af5d9210
+    tags:
+      crossplane-owner: platform-prod

@@ -24,6 +24,10 @@ spec:
             - secretRef:
                 name: postgres-secrets
           env:
+            # EBS volumes format the filesystem root with lost+found. PostgreSQL
+            # must initialize in a subdirectory rather than at the mount root.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_HOST
               value: postgres.backstage
             - name: POSTGRES_PORT

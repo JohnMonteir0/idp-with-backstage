@@ -16,7 +16,7 @@ spec:
     clusterIdentifierRef:
       name: testing
     engine: aurora-postgresql
-    instanceClass: db.r6g.large
+    instanceClass: db.t4g.medium
     publiclyAccessible: false
     autoMinorVersionUpgrade: true
     promotionTier: 0

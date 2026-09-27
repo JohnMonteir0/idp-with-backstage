@@ -1,0 +1,405 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: postgresql-rds
+  labels:
+    platform.example.org/engine: rds
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.org/v1alpha1
+    kind: PostgreSQLDatabase
+  mode: Pipeline
+  pipeline:
+    - step: create-database
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        patchSets:
+          - name: common
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.owner
+                toFieldPath: metadata.labels[platform.example.org/owner]
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.environment
+                toFieldPath: metadata.labels[platform.example.org/environment]
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.labels[platform.example.org/database]
+        resources:
+          - name: subnet-group
+            base:
+              apiVersion: rds.aws.upbound.io/v1beta1
+              kind: SubnetGroup
+              metadata:
+                annotations:
+                  argocd.argoproj.io/sync-options: Prune=false,Delete=false
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  description: Private database subnets
+                  subnetIds: []
+            patches:
+              - type: PatchSet
+                patchSetName: common
+              - type: CombineFromComposite
+                combine:
+                  strategy: string
+                  variables:
+                    - {fromFieldPath: spec.owner}
+                    - {fromFieldPath: metadata.name}
+                  string: {fmt: "%s-%s-subnets"}
+                toFieldPath: metadata.name
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.network.subnetIds
+                toFieldPath: spec.forProvider.subnetIds
+          - name: security-group
+            base:
+              apiVersion: ec2.aws.upbound.io/v1beta1
+              kind: SecurityGroup
+              metadata:
+                annotations:
+                  argocd.argoproj.io/sync-options: Prune=false,Delete=false
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  description: PostgreSQL access from the owning workload
+                  vpcId: vpc-placeholder
+            patches:
+              - type: PatchSet
+                patchSetName: common
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-db"}}
+                toFieldPath: metadata.name
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.network.vpcId
+                toFieldPath: spec.forProvider.vpcId
+              - type: CombineFromComposite
+                combine:
+                  strategy: string
+                  variables:
+                    - {fromFieldPath: spec.environment}
+                    - {fromFieldPath: spec.owner}
+                    - {fromFieldPath: metadata.name}
+                  string: {fmt: "platform-%s-%s-%s-db"}
+                toFieldPath: spec.forProvider.name
+          - name: security-group-rule
+            base:
+              apiVersion: ec2.aws.upbound.io/v1beta1
+              kind: SecurityGroupRule
+              metadata:
+                annotations:
+                  argocd.argoproj.io/sync-options: Prune=false,Delete=false
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  type: ingress
+                  fromPort: 5432
+                  toPort: 5432
+                  protocol: tcp
+                  securityGroupIdRef: {name: placeholder}
+                  sourceSecurityGroupId: sg-placeholder
+            patches:
+              - type: PatchSet
+                patchSetName: common
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-postgres"}}
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-db"}}
+                toFieldPath: spec.forProvider.securityGroupIdRef.name
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.network.clientSecurityGroupId
+                toFieldPath: spec.forProvider.sourceSecurityGroupId
+          - name: database
+            base:
+              apiVersion: rds.aws.upbound.io/v1beta1
+              kind: Instance
+              metadata:
+                annotations:
+                  argocd.argoproj.io/sync-options: Prune=false,Delete=false
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  engine: postgres
+                  storageEncrypted: true
+                  manageMasterUserPassword: true
+                  backupRetentionPeriod: 7
+                  deletionProtection: true
+                  skipFinalSnapshot: false
+                  dbSubnetGroupNameRef: {name: placeholder}
+                  vpcSecurityGroupIdRefs: [{name: placeholder}]
+                  username: dbadmin
+                  instanceClass: db.t3.micro
+                  allocatedStorage: 20
+                  storageType: gp3
+                  publiclyAccessible: false
+                  multiAz: true
+                  autoMinorVersionUpgrade: true
+            patches:
+              - type: PatchSet
+                patchSetName: common
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s"}}
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-subnets"}}
+                toFieldPath: spec.forProvider.dbSubnetGroupNameRef.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-db"}}
+                toFieldPath: spec.forProvider.vpcSecurityGroupIdRefs[0].name
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.databaseName
+                toFieldPath: spec.forProvider.dbName
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.size
+                toFieldPath: spec.forProvider.instanceClass
+                transforms:
+                  - type: match
+                    match:
+                      patterns:
+                        - {type: literal, literal: small, result: db.t3.micro}
+                        - {type: literal, literal: medium, result: db.t3.small}
+                        - {type: literal, literal: large, result: db.t3.medium}
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.size
+                toFieldPath: spec.forProvider.allocatedStorage
+                transforms:
+                  - type: match
+                    match:
+                      patterns:
+                        - {type: literal, literal: small, result: 20}
+                        - {type: literal, literal: medium, result: 50}
+                        - {type: literal, literal: large, result: 100}
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.availability
+                toFieldPath: spec.forProvider.multiAz
+                transforms:
+                  - type: match
+                    match:
+                      patterns:
+                        - {type: literal, literal: standard, result: false}
+                        - {type: literal, literal: highly-available, result: true}
+              - type: CombineFromComposite
+                combine:
+                  strategy: string
+                  variables:
+                    - {fromFieldPath: spec.environment}
+                    - {fromFieldPath: spec.owner}
+                    - {fromFieldPath: metadata.name}
+                  string: {fmt: "platform-%s-%s-%s"}
+                toFieldPath: spec.forProvider.identifier
+              - type: CombineFromComposite
+                combine:
+                  strategy: string
+                  variables:
+                    - {fromFieldPath: spec.environment}
+                    - {fromFieldPath: spec.owner}
+                    - {fromFieldPath: metadata.name}
+                  string: {fmt: "platform-%s-%s-%s-final"}
+                toFieldPath: spec.forProvider.finalSnapshotIdentifier
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.address
+                toFieldPath: status.endpoint
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.port
+                toFieldPath: status.port
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: postgresql-aurora
+  labels:
+    platform.example.org/engine: aurora
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.org/v1alpha1
+    kind: PostgreSQLDatabase
+  mode: Pipeline
+  pipeline:
+    - step: create-database
+      functionRef: {name: function-patch-and-transform}
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: subnet-group
+            base:
+              apiVersion: rds.aws.upbound.io/v1beta1
+              kind: SubnetGroup
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider: {region: us-east-1, description: Private database subnets, subnetIds: []}
+            patches:
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.region, toFieldPath: spec.forProvider.region}
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.network.subnetIds, toFieldPath: spec.forProvider.subnetIds}
+              - type: CombineFromComposite
+                combine:
+                  strategy: string
+                  variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}]
+                  string: {fmt: "%s-%s-subnets"}
+                toFieldPath: metadata.name
+          - name: security-group
+            base:
+              apiVersion: ec2.aws.upbound.io/v1beta1
+              kind: SecurityGroup
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider: {region: us-east-1, description: PostgreSQL access from the owning workload, vpcId: vpc-placeholder}
+            patches:
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.region, toFieldPath: spec.forProvider.region}
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.network.vpcId, toFieldPath: spec.forProvider.vpcId}
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-db"}}
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  strategy: string
+                  variables: [{fromFieldPath: spec.environment}, {fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}]
+                  string: {fmt: "platform-%s-%s-%s-db"}
+                toFieldPath: spec.forProvider.name
+          - name: security-group-rule
+            base:
+              apiVersion: ec2.aws.upbound.io/v1beta1
+              kind: SecurityGroupRule
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  type: ingress
+                  fromPort: 5432
+                  toPort: 5432
+                  protocol: tcp
+                  securityGroupIdRef: {name: placeholder}
+                  sourceSecurityGroupId: sg-placeholder
+            patches:
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.region, toFieldPath: spec.forProvider.region}
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.network.clientSecurityGroupId, toFieldPath: spec.forProvider.sourceSecurityGroupId}
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-postgres"}}
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-db"}}
+                toFieldPath: spec.forProvider.securityGroupIdRef.name
+          - name: database
+            base:
+              apiVersion: rds.aws.upbound.io/v1beta1
+              kind: Cluster
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  engine: aurora-postgresql
+                  storageEncrypted: true
+                  manageMasterUserPassword: true
+                  backupRetentionPeriod: 7
+                  deletionProtection: true
+                  skipFinalSnapshot: false
+                  dbSubnetGroupNameRef: {name: placeholder}
+                  vpcSecurityGroupIdRefs: [{name: placeholder}]
+                  masterUsername: dbadmin
+            patches:
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.region, toFieldPath: spec.forProvider.region}
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.databaseName, toFieldPath: spec.forProvider.databaseName}
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s"}}
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-subnets"}}
+                toFieldPath: spec.forProvider.dbSubnetGroupNameRef.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-db"}}
+                toFieldPath: spec.forProvider.vpcSecurityGroupIdRefs[0].name
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.endpoint
+                toFieldPath: status.endpoint
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.port
+                toFieldPath: status.port
+          - name: instance-1
+            base:
+              apiVersion: rds.aws.upbound.io/v1beta1
+              kind: ClusterInstance
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  engine: aurora-postgresql
+                  clusterIdentifierRef: {name: placeholder}
+                  instanceClass: db.r6g.large
+                  publiclyAccessible: false
+                  autoMinorVersionUpgrade: true
+                  promotionTier: 0
+            patches:
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.region, toFieldPath: spec.forProvider.region}
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-1"}}
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s"}}
+                toFieldPath: spec.forProvider.clusterIdentifierRef.name
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.size
+                toFieldPath: spec.forProvider.instanceClass
+                transforms:
+                  - type: match
+                    match:
+                      patterns:
+                        - {type: literal, literal: small, result: db.r6g.large}
+                        - {type: literal, literal: medium, result: db.r6g.xlarge}
+                        - {type: literal, literal: large, result: db.r6g.2xlarge}
+          - name: instance-2
+            base:
+              apiVersion: rds.aws.upbound.io/v1beta1
+              kind: ClusterInstance
+              spec:
+                deletionPolicy: Orphan
+                providerConfigRef: {name: aws}
+                forProvider:
+                  region: us-east-1
+                  engine: aurora-postgresql
+                  clusterIdentifierRef: {name: placeholder}
+                  instanceClass: db.r6g.large
+                  publiclyAccessible: false
+                  autoMinorVersionUpgrade: true
+                  promotionTier: 1
+            patches:
+              - {type: FromCompositeFieldPath, fromFieldPath: spec.region, toFieldPath: spec.forProvider.region}
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s-2"}}
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine: {strategy: string, variables: [{fromFieldPath: spec.owner}, {fromFieldPath: metadata.name}], string: {fmt: "%s-%s"}}
+                toFieldPath: spec.forProvider.clusterIdentifierRef.name
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.size
+                toFieldPath: spec.forProvider.instanceClass
+                transforms:
+                  - type: match
+                    match:
+                      patterns:
+                        - {type: literal, literal: small, result: db.r6g.large}
+                        - {type: literal, literal: medium, result: db.r6g.xlarge}
+                        - {type: literal, literal: large, result: db.r6g.2xlarge}

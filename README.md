@@ -14,18 +14,22 @@ flowchart LR
   Crossplane --> AWS[RDS / Aurora + subnet group + security group]
 ```
 
-The templates accept an existing VPC, two or more private subnet IDs, and a client security group. They create a database subnet group and a dedicated security group allowing PostgreSQL from that client group. They do not create VPCs/subnets or query AWS for dropdown choices. RDS uses Multi-AZ; Aurora creates two instances. AWS chooses its default engine version; pin a supported `engineVersion` in the skeletons if your organization requires one.
+The templates create one intent-based `PostgreSQLDatabase` request. Platform-owned Crossplane Compositions map size and availability classes to RDS/Aurora, subnet-group, and security-group resources. Network placement remains an explicit transitional input. Aurora creates two instances. AWS chooses its default engine version; pin a supported `engineVersion` in the Composition if required.
 
 This repository contains the Backstage application workspace, deployment configuration, and database templates. The included GitHub Actions workflow builds the application from this repository and publishes it to ECR. EKS, Argo CD, Crossplane, and the portal's own PostgreSQL database must already exist.
 
+For a laptop-only development loop that does not contact AWS or provision cloud
+resources, see [the lightweight kind environment](local/README.md). It runs one
+Backstage replica plus PostgreSQL and intentionally omits cloud-only add-ons.
+
 | Path | Purpose |
 | --- | --- |
-| `argocd/` | Project and four independently bootstrapped Applications |
+| `argocd/` | Project and independently bootstrapped Applications |
 | `manifests/backstage/` | Deployment, Service, Cilium Ingress and generated configuration ConfigMap |
 | `.github/workflows/backstage-image.yaml` | Build application source, publish to ECR and open a deployment PR |
-| `platform/crossplane/` | AWS RDS/EC2 providers, IRSA runtime configuration and ProviderConfig |
+| `platform/crossplane/` | Database platform API, Compositions, AWS providers, IRSA runtime configuration and ProviderConfig |
 | `catalog/` | Backstage templates and owning group |
-| `requests/databases/` | Approved resource manifests watched recursively by Argo CD |
+| `requests/databases/` | Approved requests organized by environment/team/name and watched recursively by Argo CD |
 | `docs/aws/` | IAM trust and permissions policy examples |
 
 ## 1. Match the configuration to your cluster
@@ -146,7 +150,11 @@ Confirm the automatically installed family provider is Healthy before proceeding
 
 ```sh
 kubectl apply -f argocd/applications/crossplane-config.yaml
+kubectl apply -f argocd/applications/crossplane-api.yaml
 argocd app sync crossplane-config
+argocd app sync crossplane-api
+kubectl wait --for=condition=Healthy function.pkg.crossplane.io/function-patch-and-transform --timeout=300s
+kubectl wait --for=condition=Established crd/postgresqldatabases.platform.example.org --timeout=300s
 kubectl get providerconfig.aws.upbound.io aws
 kubectl apply -f argocd/applications/database-requests.yaml
 kubectl apply -f argocd/applications/backstage.yaml
@@ -161,13 +169,15 @@ For UI-only creation, create project `idp` from the supplied project manifest an
 
 ## 5. Request and verify a database
 
-Open **Create** in Backstage and select RDS PostgreSQL or Aurora PostgreSQL. Enter a unique resource name, region, class, VPC, private subnet IDs and allowed client security group. The initial PostgreSQL database name must not be a reserved database name such as `postgres`, `template0` or `template1`.
+Open **Create** in Backstage and select PostgreSQL or Aurora PostgreSQL. Enter the owning team, environment, workload size, availability intent, region, VPC, private subnet IDs and allowed client security group. The platform maps size and availability to approved AWS settings. The initial PostgreSQL database name must not be a reserved database name such as `postgres`, `template0` or `template1`.
 
 Network fields are validated for ID shape, not against AWS inventory. Before merging, verify all subnets and the client security group belong to the selected VPC/region, at least two availability zones are present, the subnets are private, and your application network can reach them. Verify the selected instance class is available for the engine/region. For pod security groups use the pod SG; otherwise use the relevant node/application SG.
 
 The result link opens a pull request. Review and merge it. Argo watches all request directories automatically; there is no central resource list to edit. A successful Backstage task means **PR created**, and an Argo `Synced` result means manifests applied. Neither proves the database is ready:
 
 ```sh
+kubectl -n crossplane-system get postgresqldatabases.platform.example.org
+kubectl -n crossplane-system describe postgresqldatabase YOUR_DATABASE_NAME
 kubectl get managed -l platform.example.org/database=YOUR_DATABASE_NAME
 kubectl describe instance.rds.aws.upbound.io YOUR_DATABASE_NAME
 # For Aurora:

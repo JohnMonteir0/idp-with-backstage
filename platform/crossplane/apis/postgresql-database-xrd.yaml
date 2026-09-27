@@ -1,0 +1,75 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: postgresqldatabases.platform.example.org
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  scope: Namespaced
+  group: platform.example.org
+  names:
+    kind: PostgreSQLDatabase
+    plural: postgresqldatabases
+    shortNames: [pgdb]
+  defaultCompositionRef:
+    name: postgresql-rds
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [engine, owner, environment, region, size, databaseName, network]
+              properties:
+                engine:
+                  type: string
+                  enum: [rds, aurora]
+                owner:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{1,38}[a-z0-9]$'
+                  maxLength: 20
+                environment:
+                  type: string
+                  enum: [development, staging, production]
+                region:
+                  type: string
+                  enum: [us-east-1, us-east-2, us-west-2, sa-east-1, eu-west-1]
+                size:
+                  type: string
+                  enum: [small, medium, large]
+                availability:
+                  type: string
+                  enum: [standard, highly-available]
+                  default: highly-available
+                databaseName:
+                  type: string
+                  pattern: '^[a-z][a-z0-9]{0,30}$'
+                network:
+                  type: object
+                  required: [vpcId, subnetIds, clientSecurityGroupId]
+                  properties:
+                    vpcId:
+                      type: string
+                      pattern: '^vpc-([0-9a-f]{8}|[0-9a-f]{17})$'
+                    subnetIds:
+                      type: array
+                      minItems: 2
+                      uniqueItems: true
+                      items:
+                        type: string
+                        pattern: '^subnet-([0-9a-f]{8}|[0-9a-f]{17})$'
+                    clientSecurityGroupId:
+                      type: string
+                      pattern: '^sg-([0-9a-f]{8}|[0-9a-f]{17})$'
+            status:
+              type: object
+              properties:
+                endpoint:
+                  type: string
+                port:
+                  type: integer

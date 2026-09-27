@@ -1,0 +1,25 @@
+apiVersion: platform.example.org/v1alpha1
+kind: PostgreSQLDatabase
+metadata:
+  name: ${{ values.name }}
+  namespace: crossplane-system
+  labels:
+    platform.example.org/owner: ${{ values.owner }}
+    platform.example.org/environment: ${{ values.environment }}
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  crossplane:
+    compositionRef:
+      name: postgresql-aurora
+  engine: aurora
+  owner: ${{ values.owner }}
+  environment: ${{ values.environment }}
+  region: ${{ values.region }}
+  size: ${{ values.size }}
+  availability: highly-available
+  databaseName: ${{ values.databaseName }}
+  network:
+    vpcId: ${{ values.vpcId }}
+    subnetIds: ${{ values.subnetIds | dump }}
+    clientSecurityGroupId: ${{ values.clientSecurityGroupId }}

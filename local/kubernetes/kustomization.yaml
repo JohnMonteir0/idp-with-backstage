@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: backstage
+resources:
+  - ../../manifests/backstage
+  - namespace.yaml
+patches:
+  - path: delete-cloud-resources.yaml
+  - path: backstage-patch.yaml
+  - path: postgres-patch.yaml
+  - path: storage-patch.yaml
+secretGenerator:
+  - name: postgres-secrets
+    literals:
+      - POSTGRES_HOST=postgres.backstage
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=backstage
+      - POSTGRES_PASSWORD=backstage-local-only
+  - name: backstage-secrets
+    literals:
+      - BACKSTAGE_BASE_URL=http://localhost:7007
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: backstage-platform-config
+    behavior: replace
+    files:
+      - app-config.platform.yaml=app-config.local.yaml

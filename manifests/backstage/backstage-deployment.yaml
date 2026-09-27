@@ -4,7 +4,9 @@ metadata:
   name: backstage
   namespace: backstage
 spec:
-  replicas: 2
+  # The local TechDocs publisher writes generated sites to this pod's
+  # filesystem. Keep one replica unless production is moved to S3 publishing.
+  replicas: 1
   selector:
     matchLabels:
       app: backstage

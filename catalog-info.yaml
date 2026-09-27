@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: idp-with-backstage
+  title: Database Developer Portal
+  description: Backstage portal for reviewed PostgreSQL database provisioning.
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: website
+  lifecycle: production
+  owner: group:default/platform-team

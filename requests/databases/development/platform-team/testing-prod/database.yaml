@@ -1,0 +1,25 @@
+apiVersion: platform.example.org/v1alpha1
+kind: PostgreSQLDatabase
+metadata:
+  name: testing-prod
+  namespace: crossplane-system
+  labels:
+    platform.example.org/owner: platform-team
+    platform.example.org/environment: development
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  crossplane:
+    compositionRef:
+      name: postgresql-rds
+  engine: rds
+  owner: platform-team
+  environment: development
+  region: us-east-1
+  size: small
+  availability: standard
+  databaseName: appdb
+  network:
+    vpcId: vpc-00df1683a671b009a
+    subnetIds: ["subnet-0d7ccde9fc3e11430","subnet-0629c3a0cc8e61e00"]
+    clientSecurityGroupId: sg-052722f08d0c4e58e

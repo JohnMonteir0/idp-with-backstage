@@ -159,7 +159,9 @@ proxy:
 techdocs:
   builder: 'local' # Alternatives - 'external'
   generator:
-    runIn: 'docker' # Alternatives - 'local'
+    # The runtime image includes mkdocs-techdocs-core. Running locally means
+    # Kubernetes does not need a privileged Docker socket in the pod.
+    runIn: 'local'
   publisher:
     type: 'local' # Alternatives - 'googleGcs' or 'awsS3'. Read documentation for using alternatives.
 

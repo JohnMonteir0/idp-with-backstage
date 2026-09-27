@@ -22,8 +22,12 @@ FROM node:24-trixie-slim
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
-    apt-get install -y --no-install-recommends libsqlite3-dev && \
+    apt-get install -y --no-install-recommends libsqlite3-dev python3 python3-venv && \
+    python3 -m venv /opt/techdocs && \
+    /opt/techdocs/bin/pip install --no-cache-dir mkdocs-techdocs-core==1.7.1 && \
     rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/opt/techdocs/bin:${PATH}"
 
 # From here on we use the least-privileged `node` user to run the backend.
 USER node
@@ -52,6 +56,13 @@ RUN --mount=type=cache,target=/home/node/.cache/yarn,sharing=locked,uid=1000,gid
 
 # This will include the examples, if you don't need these simply remove this line
 COPY --chown=node:node examples ./examples
+
+# Include repository-owned catalog entities so the kind overlay tests the
+# current working tree rather than the version already pushed to GitHub.
+COPY --chown=node:node catalog ./catalog
+COPY --chown=node:node requests ./requests
+COPY --chown=node:node docs ./docs
+COPY --chown=node:node catalog-info.yaml mkdocs.yml ./
 
 # Then copy the rest of the backend bundle, along with any other files we might want.
 COPY --chown=node:node packages/backend/dist/bundle.tar.gz app-config*.yaml ./

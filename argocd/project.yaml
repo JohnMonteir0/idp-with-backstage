@@ -18,6 +18,8 @@ spec:
   - group: pkg.crossplane.io
     kind: Provider
   - group: pkg.crossplane.io
+    kind: Function
+  - group: pkg.crossplane.io
     kind: DeploymentRuntimeConfig
   - group: aws.upbound.io
     kind: ProviderConfig
@@ -27,6 +29,10 @@ spec:
     kind: SecurityGroup
   - group: ec2.aws.upbound.io
     kind: SecurityGroupRule
+  - group: apiextensions.crossplane.io
+    kind: CompositeResourceDefinition
+  - group: apiextensions.crossplane.io
+    kind: Composition
   namespaceResourceWhitelist:
   - group: ''
     kind: ConfigMap
@@ -38,3 +44,5 @@ spec:
     kind: Deployment
   - group: networking.k8s.io
     kind: Ingress
+  - group: platform.example.org
+    kind: PostgreSQLDatabase

@@ -1,0 +1,4 @@
+# Platform API definitions and production database requests require platform review.
+/platform/crossplane/ @JohnMonteir0
+/requests/databases/production/ @JohnMonteir0
+/catalog/templates/ @JohnMonteir0

@@ -1,0 +1,45 @@
+app:
+  title: Internal Developer Portal (local)
+  baseUrl: http://localhost:7007
+
+backend:
+  baseUrl: http://localhost:7007
+  cors:
+    origin: http://localhost:7007
+    credentials: true
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+
+auth:
+  environment: development
+  providers:
+    guest:
+      dangerouslyAllowOutsideDevelopment: true
+
+catalog:
+  rules:
+    - allow: [Component, System, API, Resource, Location, Template, Group, User, Domain]
+  locations:
+    - type: file
+      target: ./catalog-info.yaml
+    - type: file
+      target: ./catalog/templates/rds-postgres/template.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ./catalog/templates/aurora-postgres/template.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ./catalog/platform-team.yaml
+      rules:
+        - allow: [Group, User]
+    - type: file
+      target: ./requests/databases/testing/catalog-info.yaml
+    - type: file
+      target: ./requests/databases/testing2/catalog-info.yaml

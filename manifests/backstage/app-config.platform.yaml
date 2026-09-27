@@ -87,4 +87,6 @@ catalog:
 
   locations:
     - type: url
+      target: https://raw.githubusercontent.com/JohnMonteir0/idp-with-backstage/main/catalog-info.yaml
+    - type: url
       target: https://raw.githubusercontent.com/JohnMonteir0/idp-with-backstage/main/catalog/catalog-info.yaml

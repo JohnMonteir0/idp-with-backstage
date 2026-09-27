@@ -1,0 +1,13 @@
+site_name: Database Developer Portal
+site_description: Operating and developing the Backstage database portal
+docs_dir: docs/techdocs
+
+nav:
+  - Overview: index.md
+  - Local development: local-development.md
+  - Production: production.md
+  - Database requests: database-requests.md
+
+plugins:
+  - techdocs-core:
+      use_material_search: true

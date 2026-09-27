@@ -1,13 +1,16 @@
 # Kubernetes manifests
 
-`backstage/` is the complete Kustomize source consumed by Argo CD. Configure the Argo CD Application with:
+`backstage/` is the complete Kustomize source consumed by Argo CD. Do not create
+the Backstage Application manually in the Argo CD UI. Bootstrap the repository's
+root application after its configuration has been merged into `main`:
 
-```text
-Repository: https://github.com/JohnMonteir0/idp-with-backstage.git
-Revision: main
-Path: manifests/backstage
-Namespace: backstage
+```sh
+kubectl apply -f argocd/bootstrap/root.yaml
 ```
+
+The root application manages the Backstage Application and the other platform
+applications declared under `argocd/applications/`. See `argocd/README.md` for
+the complete bootstrap flow.
 
 The image workflow updates `manifests/backstage/backstage-deployment.yaml` with the immutable ECR image digest and opens a pull request. Merge that pull request; Argo CD then syncs the change from `main`.
 

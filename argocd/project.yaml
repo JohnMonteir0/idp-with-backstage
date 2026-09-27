@@ -3,6 +3,8 @@ kind: AppProject
 metadata:
   name: idp
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   description: Backstage and Crossplane database provisioning
   sourceRepos:
@@ -37,6 +39,8 @@ spec:
   - group: ''
     kind: ConfigMap
   - group: ''
+    kind: PersistentVolumeClaim
+  - group: ''
     kind: Service
   - group: ''
     kind: ServiceAccount
@@ -44,5 +48,7 @@ spec:
     kind: Deployment
   - group: networking.k8s.io
     kind: Ingress
+  - group: bitnami.com
+    kind: SealedSecret
   - group: platform.example.org
     kind: PostgreSQLDatabase
